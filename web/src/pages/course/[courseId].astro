@@ -381,7 +381,10 @@ const courseData = {
   }
 
   function updateNotes(lessonId) {
-    const note = courseNotes[lessonId];
+    const note = courseNotes[lessonId] || [
+      'Sample lesson note: this area will display the PDF notes for the selected video.',
+      'Use this space for key ideas, practice reminders, and any supporting written material tied to the current lesson.',
+    ].join('\n\n');
     if (note && notesContent && notesSection) {
       notesContent.replaceChildren();
       note
