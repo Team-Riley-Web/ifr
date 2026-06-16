@@ -1,11 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { courses } from '../lib/courses';
-import { getProgress } from '../lib/data';
+import { getLastActivity, getProgress } from '../lib/data';
 
 const user = Astro.locals.user!;
 
 const progress = await getProgress(user.id);
+const lastActivity = await getLastActivity(user.id);
 const progressMap = Object.fromEntries(
   Object.entries(progress).map(([courseId, lessons]) => [
     courseId,
@@ -14,30 +15,35 @@ const progressMap = Object.fromEntries(
 );
 
 const courseIcons: Record<string, string> = {
-  'core-skills': '🎵',
-  'seven-worlds': '🌍',
-  'pure-harmony-essentials': '🎶',
-  'chord-melody': '🎸',
-  'chord-melody-2': '🎸',
-  'violin-looping': '🎻',
+  'core-skills': '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  'seven-worlds': '<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+  'pure-harmony-essentials': '<path d="M9 18V5l12-2v13"/><path d="M9 9l12-2"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  'chord-melody': '<path d="m11.9 12.1 4.3 4.3"/><path d="M20.1 4.2a2.1 2.1 0 0 0-3 0L4.2 17.1a2.1 2.1 0 0 0 3 3L20.1 7.2a2.1 2.1 0 0 0 0-3Z"/><path d="m6 18 4-4"/><path d="m14 6 4 4"/>',
+  'chord-melody-2': '<path d="m11.9 12.1 4.3 4.3"/><path d="M20.1 4.2a2.1 2.1 0 0 0-3 0L4.2 17.1a2.1 2.1 0 0 0 3 3L20.1 7.2a2.1 2.1 0 0 0 0-3Z"/><path d="m6 18 4-4"/><path d="m14 6 4 4"/>',
+  'violin-looping': '<path d="M17.5 6.5a4.95 4.95 0 0 0-7 0L6 11l7 7 4.5-4.5a4.95 4.95 0 0 0 0-7Z"/><path d="M3 21 9 15"/><path d="m14 7 3 3"/><path d="M20 3v5h-5"/>',
 };
+const defaultCourseIcon = '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/>';
+const playIcon = '<polygon points="6 3 20 12 6 21 6 3"/>';
+const clockIcon = '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>';
+const lastCourse = lastActivity ? courses.find(course => course.id === lastActivity.courseId) : undefined;
+const lastLesson = lastCourse?.lessons.find(lesson => lesson.id === lastActivity?.lessonId);
 ---
 <Layout title="Dashboard">
-  <div class="min-h-screen flex flex-col">
+  <div class="min-h-screen flex flex-col bg-[radial-gradient(circle_at_top_left,rgba(214,168,79,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(79,70,229,0.14),transparent_30%),linear-gradient(135deg,#050816_0%,#0b1220_45%,#111827_100%)]">
     <!-- Header -->
-    <header class="bg-sidebar shadow-sm sticky top-0 z-10">
+    <header class="sticky top-0 z-10 border-b border-white/10 bg-slate-950/75 shadow-2xl shadow-black/20 backdrop-blur-xl">
       <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3 sm:px-6 sm:py-4">
         <h1 class="text-xl font-bold text-white tracking-tight">IFR Courses</h1>
         <div class="flex items-center gap-1 sm:gap-4">
           <span class="text-slate-400 text-sm hidden sm:block">Hello, <span class="text-white font-medium">{user.username}</span></span>
           {user.isAdmin && (
-            <a href="/admin/users" class="text-sm text-slate-400 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-white/10">
+            <a href="/admin/users" class="text-sm text-slate-300 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-white/10">
               Users
             </a>
           )}
           <button
             id="logout-btn"
-            class="text-sm text-slate-400 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-white/10"
+            class="text-sm text-slate-300 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-white/10"
           >
             Sign out
           </button>
@@ -48,9 +54,34 @@ const courseIcons: Record<string, string> = {
     <!-- Main -->
     <main class="flex-1 max-w-6xl mx-auto w-full px-4 py-6 sm:px-6 sm:py-10">
       <div class="mb-6 sm:mb-8">
-        <h2 class="text-2xl font-bold text-slate-800">Your Courses</h2>
-        <p class="text-slate-500 mt-1 text-sm">Pick up where you left off or start a new course.</p>
+        <p class="mb-3 text-xs font-semibold uppercase tracking-[0.28em] text-brand-500">Course Library</p>
+        <h2 class="text-3xl font-bold tracking-tight text-white">Your Courses</h2>
+        <p class="text-slate-400 mt-2 text-sm">Pick up where you left off or start a new course.</p>
       </div>
+
+      {lastCourse && (
+        <a
+          href={`/course/${lastCourse.id}`}
+          class="mb-6 flex flex-col gap-4 rounded-2xl border border-brand-500/25 bg-gradient-to-br from-brand-500/18 via-white/[0.08] to-indigo-500/12 p-5 shadow-2xl shadow-black/25 ring-1 ring-white/10 transition hover:-translate-y-0.5 hover:border-brand-500/50 sm:mb-8 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+        >
+          <div class="flex min-w-0 items-center gap-4">
+            <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-950/60 text-brand-100 ring-1 ring-brand-500/25">
+              <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" set:html={clockIcon}></svg>
+            </div>
+            <div class="min-w-0">
+              <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-500">Last Played</p>
+              <h3 class="mt-1 truncate text-xl font-semibold text-white">{lastCourse.title}</h3>
+              <p class="mt-1 truncate text-sm text-slate-400">
+                {lastLesson ? lastLesson.title : `${lastCourse.lessons.length} lessons`}
+              </p>
+            </div>
+          </div>
+          <div class="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-brand-500 via-amber-400 to-brand-600 px-4 text-sm font-semibold text-slate-950">
+            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" set:html={playIcon}></svg>
+            Continue
+          </div>
+        </a>
+      )}
 
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
         {courses.map((course, i) => {
@@ -63,37 +94,37 @@ const courseIcons: Record<string, string> = {
           return (
             <a
               href={`/course/${course.id}`}
-              class="group bg-white rounded-xl shadow-sm border border-slate-100 p-5 hover:shadow-md hover:border-brand-200 transition-all duration-200 flex flex-col sm:rounded-2xl sm:p-6"
+              class="group flex flex-col rounded-xl border border-white/10 bg-white/[0.07] p-5 shadow-2xl shadow-black/20 backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-500/50 hover:bg-white/[0.1] sm:rounded-2xl sm:p-6"
             >
               <div class="flex items-start justify-between mb-4">
-                <div class="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center text-2xl flex-shrink-0">
-                  {courseIcons[course.id] ?? '📚'}
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500/25 to-indigo-500/20 ring-1 ring-white/10 flex items-center justify-center text-brand-100 flex-shrink-0">
+                  <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" set:html={courseIcons[course.id] ?? defaultCourseIcon}></svg>
                 </div>
                 <span class={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                  finished ? 'bg-green-100 text-green-700' :
-                  started  ? 'bg-brand-100 text-brand-700' :
-                             'bg-slate-100 text-slate-500'
+                  finished ? 'bg-emerald-400/15 text-emerald-200 ring-1 ring-emerald-400/20' :
+                  started  ? 'bg-brand-500/15 text-brand-100 ring-1 ring-brand-500/20' :
+                             'bg-white/10 text-slate-300 ring-1 ring-white/10'
                 }`}>
                   {finished ? 'Complete' : started ? 'In Progress' : 'Not Started'}
                 </span>
               </div>
 
               <div class="flex-1">
-                <p class="text-xs text-slate-400 font-medium mb-1">Course {String(i + 1).padStart(2, '0')}</p>
-                <h3 class="text-lg font-semibold text-slate-800 group-hover:text-brand-600 transition-colors leading-snug">
+                <p class="text-xs text-brand-500 font-semibold mb-1">Course {String(i + 1).padStart(2, '0')}</p>
+                <h3 class="text-lg font-semibold text-white group-hover:text-brand-100 transition-colors leading-snug">
                   {course.title}
                 </h3>
-                <p class="text-sm text-slate-500 mt-1">{total} lesson{total !== 1 ? 's' : ''}</p>
+                <p class="text-sm text-slate-400 mt-1">{total} lesson{total !== 1 ? 's' : ''}</p>
               </div>
 
               <div class="mt-5">
-                <div class="flex justify-between text-xs text-slate-500 mb-1.5">
+                <div class="flex justify-between text-xs text-slate-400 mb-1.5">
                   <span>{done} of {total} complete</span>
                   <span>{pct}%</span>
                 </div>
-                <div class="w-full bg-slate-100 rounded-full h-1.5">
+                <div class="w-full bg-white/10 rounded-full h-1.5">
                   <div
-                    class={`h-1.5 rounded-full transition-all ${finished ? 'bg-green-500' : 'bg-brand-500'}`}
+                    class={`h-1.5 rounded-full transition-all ${finished ? 'bg-emerald-400' : 'bg-gradient-to-r from-brand-500 to-amber-300'}`}
                     style={`width: ${pct}%`}
                   ></div>
                 </div>

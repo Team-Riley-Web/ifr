@@ -9,56 +9,56 @@ if (!Astro.locals.user?.isAdmin) {
 const users = await listUsers();
 ---
 <Layout title="Users">
-  <div class="min-h-screen flex flex-col">
-    <header class="bg-sidebar shadow-sm sticky top-0 z-10">
+  <div class="min-h-screen flex flex-col bg-[radial-gradient(circle_at_top_left,rgba(214,168,79,0.14),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(20,184,166,0.12),transparent_30%),linear-gradient(135deg,#050816_0%,#0b1220_45%,#111827_100%)]">
+    <header class="sticky top-0 z-10 border-b border-white/10 bg-slate-950/75 shadow-2xl shadow-black/20 backdrop-blur-xl">
       <div class="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
         <h1 class="text-xl font-bold text-white tracking-tight">Users</h1>
-        <a href="/dashboard" class="text-sm text-slate-400 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-white/10">
+        <a href="/dashboard" class="text-sm text-slate-300 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-white/10">
           Back to dashboard
         </a>
       </div>
     </header>
 
     <main class="flex-1 max-w-3xl mx-auto w-full px-6 py-10 space-y-8">
-      <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-        <h2 class="text-lg font-semibold text-slate-800 mb-4">Create student account</h2>
+      <section class="rounded-2xl border border-white/10 bg-white/[0.07] p-6 shadow-2xl shadow-black/20 backdrop-blur">
+        <h2 class="text-lg font-semibold text-white mb-4">Create student account</h2>
         <form id="create-form" class="flex gap-3 items-end">
           <div class="flex-1">
-            <label for="username" class="block text-sm font-medium text-slate-700 mb-1.5">Username</label>
+            <label for="username" class="block text-sm font-medium text-slate-200 mb-1.5">Username</label>
             <input
               id="username"
               name="username"
               type="text"
               required
-              class="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
+              class="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-slate-950/70 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
               placeholder="e.g. jane"
             />
           </div>
           <button
             type="submit"
-            class="py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg transition focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-60"
+            class="py-2.5 px-4 bg-gradient-to-r from-brand-500 via-amber-400 to-brand-600 hover:from-brand-600 hover:to-amber-500 text-slate-950 font-semibold rounded-lg transition focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-60"
           >
             Create account
           </button>
         </form>
-        <div id="result" class="hidden mt-4 text-sm bg-slate-50 border border-slate-200 rounded-lg px-4 py-3"></div>
-        <div id="error-msg" class="hidden mt-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5"></div>
+        <div id="result" class="hidden mt-4 text-sm text-slate-200 bg-slate-950/60 border border-white/10 rounded-lg px-4 py-3"></div>
+        <div id="error-msg" class="hidden mt-4 text-sm text-red-200 bg-red-950/60 border border-red-400/30 rounded-lg px-4 py-2.5"></div>
       </section>
 
-      <section class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-        <h2 class="text-lg font-semibold text-slate-800 mb-4">All users</h2>
+      <section class="rounded-2xl border border-white/10 bg-white/[0.07] p-6 shadow-2xl shadow-black/20 backdrop-blur">
+        <h2 class="text-lg font-semibold text-white mb-4">All users</h2>
         <table class="w-full text-sm">
           <thead>
-            <tr class="text-left text-slate-500 border-b border-slate-100">
+            <tr class="text-left text-slate-400 border-b border-white/10">
               <th class="py-2 font-medium">Username</th>
               <th class="py-2 font-medium">Role</th>
             </tr>
           </thead>
           <tbody>
             {users.map(u => (
-              <tr class="border-b border-slate-50">
-                <td class="py-2 text-slate-800">{u.username}</td>
-                <td class="py-2 text-slate-500">{u.isAdmin ? 'Admin' : 'Student'}</td>
+              <tr class="border-b border-white/5">
+                <td class="py-2 text-slate-100">{u.username}</td>
+                <td class="py-2 text-slate-400">{u.isAdmin ? 'Admin' : 'Student'}</td>
               </tr>
             ))}
           </tbody>
@@ -107,7 +107,7 @@ const users = await listUsers();
       passLine.append(passLabel, code);
 
       const note = document.createElement('div');
-      note.className = 'mt-1 text-slate-500';
+      note.className = 'mt-1 text-slate-400';
       note.textContent = "Copy this now — it won't be shown again.";
 
       result.append(created, userLine, passLine, note);

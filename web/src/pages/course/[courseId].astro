@@ -2,7 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import { getCourse } from '../../lib/courses';
 import { getCourseNotes } from '../../lib/pdf-notes';
-import { getProgress } from '../../lib/data';
+import { getLastActivity, getProgress, setLastActivity } from '../../lib/data';
 
 const { courseId } = Astro.params;
 const course = getCourse(courseId ?? '');
@@ -11,9 +11,14 @@ if (!course) return Astro.redirect('/dashboard');
 const user = Astro.locals.user!;
 
 const progressMap = (await getProgress(user.id))[course.id] ?? {};
+const lastActivity = await getLastActivity(user.id);
 
-const initialLesson = course.lessons.find(l => !progressMap[l.id]) ?? course.lessons[0]!;
+const lastLesson = lastActivity?.courseId === course.id
+  ? course.lessons.find(lesson => lesson.id === lastActivity.lessonId)
+  : undefined;
+const initialLesson = lastLesson ?? course.lessons.find(l => !progressMap[l.id]) ?? course.lessons[0]!;
 const courseNotes = await getCourseNotes(course.id);
+await setLastActivity(user.id, course.id, initialLesson.id);
 
 // Serializable course data for client script
 const courseData = {
@@ -30,10 +35,10 @@ const courseData = {
 };
 ---
 <Layout title={course.title}>
-  <div class="flex min-h-screen flex-col overflow-x-hidden bg-slate-50 pb-24 lg:h-screen lg:flex-row lg:overflow-hidden lg:pb-0">
+  <div class="flex min-h-screen flex-col overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(214,168,79,0.14),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(79,70,229,0.12),transparent_30%),linear-gradient(135deg,#050816_0%,#0b1220_45%,#111827_100%)] pb-24 lg:h-screen lg:flex-row lg:overflow-hidden lg:pb-0">
 
     <!-- Sidebar -->
-    <aside class="hidden flex-shrink-0 flex-col overflow-hidden bg-sidebar lg:flex lg:h-auto lg:w-72">
+    <aside class="hidden flex-shrink-0 flex-col overflow-hidden border-r border-white/10 bg-slate-950/80 shadow-2xl shadow-black/30 backdrop-blur-xl lg:flex lg:h-auto lg:w-72">
       <!-- Sidebar header -->
       <div class="border-b border-white/10 px-4 py-2.5 lg:px-5 lg:py-5">
         <a href="/dashboard" class="mb-2 flex items-center gap-2 text-sm text-slate-400 transition hover:text-white lg:mb-4">
@@ -41,7 +46,7 @@ const courseData = {
           All Courses
         </a>
         <h2 class="line-clamp-2 text-sm font-bold leading-snug text-white sm:text-base lg:line-clamp-none">{course.title}</h2>
-        <p class="text-slate-400 text-xs mt-1">{course.lessons.length} lessons</p>
+        <p class="text-brand-500 text-xs font-semibold mt-1">{course.lessons.length} lessons</p>
       </div>
 
       <!-- PDF link -->
@@ -64,15 +69,15 @@ const courseData = {
             data-lesson-id={lesson.id}
             class:list={[
               'lesson-btn w-full text-left px-3 py-2.5 rounded-lg mb-0.5 flex items-center gap-3 transition-all group lg:py-3',
-              lesson.id === initialLesson.id ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5',
+              lesson.id === initialLesson.id ? 'bg-gradient-to-r from-brand-500/20 to-indigo-500/10 text-white ring-1 ring-brand-500/25' : 'text-slate-400 hover:text-white hover:bg-white/5',
             ]}
           >
             <!-- Completion indicator -->
             <span class:list={[
               'flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs transition-all',
               progressMap[lesson.id]
-                ? 'bg-green-500 border-green-500 text-white'
-                : 'border-slate-500 text-slate-600 group-hover:border-slate-400',
+                ? 'bg-emerald-400 border-emerald-400 text-slate-950'
+                : 'border-slate-500 text-slate-400 group-hover:border-brand-500/60 group-hover:text-brand-100',
             ]} data-check={lesson.id}>
               {progressMap[lesson.id]
                 ? <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
@@ -88,15 +93,15 @@ const courseData = {
     <!-- Main content -->
     <main class="flex min-h-0 flex-1 flex-col overflow-visible lg:overflow-hidden">
       <!-- Top bar -->
-      <div class="flex flex-shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:px-6">
-        <a href="/dashboard" class="flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-800 lg:hidden">
+      <div class="flex flex-shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-slate-950/75 px-4 py-3 shadow-2xl shadow-black/20 backdrop-blur-xl lg:px-6">
+        <a href="/dashboard" class="flex items-center gap-2 text-sm font-medium text-slate-300 transition hover:text-white lg:hidden">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
           </svg>
           All Courses
         </a>
         <div class="hidden min-w-0 flex-1 lg:block">
-          <h1 id="lesson-title" class="text-sm font-semibold leading-snug text-slate-800 sm:text-base">{initialLesson.title}</h1>
+          <h1 id="lesson-title" class="text-sm font-semibold leading-snug text-white sm:text-base">{initialLesson.title}</h1>
           <p id="lesson-num" class="text-xs text-slate-400">
             Lesson {course.lessons.findIndex(l => l.id === initialLesson.id) + 1} of {course.lessons.length}
           </p>
@@ -112,7 +117,7 @@ const courseData = {
         </button>
         <button
           id="mobile-menu-btn"
-          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 lg:hidden"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10 lg:hidden"
           aria-label="Open lesson menu"
           aria-controls="mobile-lesson-menu"
           aria-expanded="false"
@@ -123,9 +128,9 @@ const courseData = {
         </button>
       </div>
 
-      <div class="border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
-        <h1 id="mobile-lesson-title" class="text-base font-semibold leading-snug text-slate-800">{initialLesson.title}</h1>
-        <p id="mobile-lesson-num" class="mt-1 text-xs text-slate-400">
+      <div class="border-b border-white/10 bg-slate-900/80 px-4 py-3 backdrop-blur lg:hidden">
+        <h1 id="mobile-lesson-title" class="text-base font-semibold leading-snug text-white">{initialLesson.title}</h1>
+        <p id="mobile-lesson-num" class="mt-1 text-xs text-brand-500">
           Lesson {course.lessons.findIndex(l => l.id === initialLesson.id) + 1} of {course.lessons.length}
         </p>
       </div>
@@ -133,7 +138,7 @@ const courseData = {
       <!-- Video area -->
       <div class="flex min-h-0 flex-1 flex-col overflow-visible lg:overflow-auto">
         <!-- Tab bar -->
-        <div id="tab-bar" class="flex flex-shrink-0 gap-1 overflow-x-auto border-b border-slate-200 bg-white px-3 lg:px-6">
+        <div id="tab-bar" class="flex flex-shrink-0 gap-1 overflow-x-auto border-b border-white/10 bg-slate-950/65 px-3 backdrop-blur lg:px-6">
         </div>
 
         <!-- Player + Notes (scrollable) -->
@@ -152,7 +157,7 @@ const courseData = {
           </div>
 
           <!-- Notes section -->
-          <div id="notes-section" class="hidden border-t border-slate-200 bg-white px-4 py-5 sm:px-8 sm:py-6">
+          <div id="notes-section" class="hidden border-t border-white/10 bg-slate-950/75 px-4 py-5 backdrop-blur sm:px-8 sm:py-6">
             <div class="max-w-3xl">
               <h3 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,7 +165,7 @@ const courseData = {
                 </svg>
                 Course Notes
               </h3>
-              <p id="notes-content" class="text-slate-700 text-sm leading-relaxed"></p>
+              <p id="notes-content" class="text-slate-300 text-sm leading-relaxed"></p>
             </div>
           </div>
         </div>
@@ -169,14 +174,10 @@ const courseData = {
 
     <!-- Mobile lesson menu -->
     <div id="mobile-lesson-menu" class="fixed inset-0 z-50 hidden lg:hidden" role="dialog" aria-modal="true">
-      <button id="mobile-menu-backdrop" class="absolute inset-0 bg-slate-950/50" aria-label="Close lesson menu"></button>
-      <aside class="absolute inset-y-0 right-0 flex w-[86vw] max-w-sm flex-col overflow-hidden bg-sidebar shadow-2xl">
+      <button id="mobile-menu-backdrop" class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" aria-label="Close lesson menu"></button>
+      <aside class="absolute inset-y-0 right-0 flex w-[86vw] max-w-sm flex-col overflow-hidden border-l border-white/10 bg-slate-950 shadow-2xl shadow-black/50">
         <div class="border-b border-white/10 px-4 py-4">
-          <div class="mb-3 flex items-center justify-between gap-3">
-            <a href="/dashboard" class="flex items-center gap-2 text-sm text-slate-400 transition hover:text-white">
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-              All Courses
-            </a>
+          <div class="mb-3 flex items-center justify-end">
             <button id="mobile-menu-close" class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white" aria-label="Close lesson menu">
               <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -184,7 +185,7 @@ const courseData = {
             </button>
           </div>
           <h2 class="line-clamp-2 text-base font-bold leading-snug text-white">{course.title}</h2>
-          <p class="mt-1 text-xs text-slate-400">{course.lessons.length} lessons</p>
+          <p class="mt-1 text-xs font-semibold text-brand-500">{course.lessons.length} lessons</p>
         </div>
 
         <div class="border-b border-white/10 px-4 py-3">
@@ -205,14 +206,14 @@ const courseData = {
               data-lesson-id={lesson.id}
               class:list={[
                 'lesson-btn w-full text-left px-3 py-3 rounded-lg mb-0.5 flex items-center gap-3 transition-all group',
-                lesson.id === initialLesson.id ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5',
+                lesson.id === initialLesson.id ? 'bg-gradient-to-r from-brand-500/20 to-indigo-500/10 text-white ring-1 ring-brand-500/25' : 'text-slate-400 hover:text-white hover:bg-white/5',
               ]}
             >
               <span class:list={[
                 'flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs transition-all',
                 progressMap[lesson.id]
-                  ? 'bg-green-500 border-green-500 text-white'
-                  : 'border-slate-500 text-slate-600 group-hover:border-slate-400',
+                  ? 'bg-emerald-400 border-emerald-400 text-slate-950'
+                  : 'border-slate-500 text-slate-400 group-hover:border-brand-500/60 group-hover:text-brand-100',
               ]} data-check={lesson.id}>
                 {progressMap[lesson.id]
                   ? <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
@@ -227,11 +228,11 @@ const courseData = {
     </div>
 
     <!-- Mobile bottom controls -->
-    <div class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden">
+    <div class="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/90 px-3 py-3 shadow-[0_-8px_24px_rgba(0,0,0,0.35)] backdrop-blur-xl lg:hidden">
       <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <button
           id="prev-lesson-btn"
-          class="flex min-h-11 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          class="flex min-h-11 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] px-3 text-sm font-medium text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Previous
         </button>
@@ -246,7 +247,7 @@ const courseData = {
         </button>
         <button
           id="next-lesson-btn"
-          class="flex min-h-11 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          class="flex min-h-11 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] px-3 text-sm font-medium text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Next
         </button>
@@ -298,8 +299,8 @@ const courseData = {
       const btn = document.createElement('button');
       btn.className = `tab-btn px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
         tab.id === currentTabId
-          ? 'border-indigo-500 text-indigo-600'
-          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+          ? 'border-brand-500 text-brand-100'
+          : 'border-transparent text-slate-400 hover:text-white hover:border-white/20'
       }`;
       btn.textContent = tab.label;
       btn.dataset.tabId = tab.id;
@@ -338,9 +339,9 @@ const courseData = {
     audioPanel.innerHTML = '';
     tab.files.forEach((file, i) => {
       const wrapper = document.createElement('div');
-      wrapper.className = 'w-full max-w-lg bg-slate-800 rounded-xl p-5';
+      wrapper.className = 'w-full max-w-lg rounded-xl border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/30';
       wrapper.innerHTML = `
-        <p class="text-slate-300 text-sm font-medium mb-3">${file.label}</p>
+        <p class="text-slate-200 text-sm font-medium mb-3">${file.label}</p>
         <audio controls src="${mediaUrl(lessonId, tab.id, i)}" class="w-full" preload="metadata"></audio>
       `;
       audioPanel.appendChild(wrapper);
@@ -364,7 +365,7 @@ const courseData = {
       const id = btn.dataset.lessonId;
       const isActive = id === lessonId;
       btn.className = `lesson-btn w-full text-left px-3 py-2.5 rounded-lg mb-0.5 flex items-center gap-3 transition-all group lg:py-3 ${
-        isActive ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'
+        isActive ? 'bg-gradient-to-r from-brand-500/20 to-indigo-500/10 text-white ring-1 ring-brand-500/25' : 'text-slate-400 hover:text-white hover:bg-white/5'
       }`;
     });
 
@@ -393,13 +394,13 @@ const courseData = {
     const done = !!progress[lessonId];
     const desktopClass = `hidden min-h-10 shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all sm:px-4 lg:flex ${
       done
-        ? 'bg-green-50 border-green-200 text-green-700 hover:bg-red-50 hover:border-red-200 hover:text-red-600'
-        : 'bg-white border-slate-200 text-slate-600 hover:bg-brand-50 hover:border-brand-200 hover:text-brand-600'
+        ? 'bg-emerald-400/15 border-emerald-400/25 text-emerald-200 hover:bg-red-500/10 hover:border-red-400/25 hover:text-red-200'
+        : 'bg-white/[0.06] border-white/10 text-slate-200 hover:bg-brand-500/10 hover:border-brand-500/30 hover:text-brand-100'
     }`;
     const mobileClass = `flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 text-sm font-semibold transition-all ${
       done
-        ? 'bg-green-50 border-green-200 text-green-700'
-        : 'bg-brand-600 border-brand-600 text-white hover:bg-brand-700 hover:border-brand-700'
+        ? 'bg-emerald-400/15 border-emerald-400/25 text-emerald-200'
+        : 'bg-gradient-to-r from-brand-500 via-amber-400 to-brand-600 border-brand-500 text-slate-950 hover:from-brand-600 hover:to-amber-500'
     }`;
 
     completeBtn.className = desktopClass;
@@ -411,11 +412,11 @@ const courseData = {
   function updateSidebarCheck(lessonId, done) {
     document.querySelectorAll(`[data-check="${lessonId}"]`).forEach(checkEl => {
       if (done) {
-        checkEl.className = 'flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs transition-all bg-green-500 border-green-500 text-white';
+        checkEl.className = 'flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs transition-all bg-emerald-400 border-emerald-400 text-slate-950';
         checkEl.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>`;
       } else {
         const idx = lessons.findIndex(l => l.id === lessonId);
-        checkEl.className = 'flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs transition-all border-slate-500 text-slate-600';
+        checkEl.className = 'flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs transition-all border-slate-500 text-slate-400';
         checkEl.innerHTML = `<span class="text-xs leading-none">${idx + 1}</span>`;
       }
     });

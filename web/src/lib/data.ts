@@ -20,6 +20,11 @@ interface SessionUser {
 }
 
 type Progress = Record<string, Record<string, boolean>>;
+export interface UserActivity {
+  courseId: string;
+  lessonId: string | null;
+  updatedAt: string;
+}
 
 // process.env.NETLIFY is only set during the build step, not at function
 // runtime. NETLIFY_BLOBS_CONTEXT is what @netlify/blobs itself relies on to
@@ -135,12 +140,42 @@ export async function getProgress(userId: number): Promise<Progress> {
   return progress;
 }
 
+export async function getLastActivity(userId: number): Promise<UserActivity | null> {
+  if (isNetlify) {
+    return (await getStore(DATA_STORE).get(`activity/${userId}`, { type: 'json', consistency: 'strong' }) as UserActivity | null) ?? null;
+  }
+
+  const row = getDb().prepare(
+    'SELECT course_id, lesson_id, updated_at FROM user_activity WHERE user_id = ?',
+  ).get(userId) as { course_id: string; lesson_id: string | null; updated_at: string } | undefined;
+  return row ? { courseId: row.course_id, lessonId: row.lesson_id, updatedAt: row.updated_at } : null;
+}
+
+export async function setLastActivity(userId: number, courseId: string, lessonId: string | null = null): Promise<void> {
+  const updatedAt = new Date().toISOString();
+
+  if (isNetlify) {
+    await getStore(DATA_STORE).setJSON(`activity/${userId}`, { courseId, lessonId, updatedAt });
+    return;
+  }
+
+  getDb().prepare(`
+    INSERT INTO user_activity (user_id, course_id, lesson_id, updated_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(user_id) DO UPDATE SET
+      course_id = excluded.course_id,
+      lesson_id = excluded.lesson_id,
+      updated_at = excluded.updated_at
+  `).run(userId, courseId, lessonId, updatedAt);
+}
+
 export async function setLessonProgress(userId: number, courseId: string, lessonId: string, completed: boolean): Promise<void> {
   if (isNetlify) {
     const progress = await getProgress(userId);
     progress[courseId] ??= {};
     progress[courseId]![lessonId] = completed;
     await getStore(DATA_STORE).setJSON(`progress/${userId}`, progress);
+    await setLastActivity(userId, courseId, lessonId);
     return;
   }
 
@@ -151,4 +186,5 @@ export async function setLessonProgress(userId: number, courseId: string, lesson
       completed = excluded.completed,
       completed_at = excluded.completed_at
   `).run(userId, courseId, lessonId, completed ? 1 : 0, completed ? new Date().toISOString() : null);
+  await setLastActivity(userId, courseId, lessonId);
 }

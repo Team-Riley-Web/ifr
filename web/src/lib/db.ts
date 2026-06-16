@@ -46,6 +46,14 @@ export function getDb(): DatabaseSync {
     PRIMARY KEY (user_id, course_id, lesson_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS user_activity (
+    user_id INTEGER PRIMARY KEY,
+    course_id TEXT NOT NULL,
+    lesson_id TEXT,
+    updated_at DATETIME NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
 
   return db;
