@@ -1,15 +1,15 @@
 import fs from 'node:fs';
-import { getPdfPath, courses } from './courses';
+import { getPdfObjectKey, getPdfPath, courses } from './courses';
+import { getObjectBytes, hasR2Config } from './r2';
 
 type NotesMap = Record<string, string>; // lessonId -> note text
 const cache = new Map<string, NotesMap>();
 
-async function extractPdfText(filePath: string): Promise<string> {
+async function extractPdfText(data: Uint8Array): Promise<string> {
   // pdfjs-dist is installed as a dependency of pdf-parse
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore — no types for legacy build path
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  const data = new Uint8Array(fs.readFileSync(filePath));
   const doc = await (pdfjs as any).getDocument({
     data,
     useWorkerFetch: false,
@@ -67,14 +67,34 @@ function parseUnits(text: string): Array<{ title: string; body: string }> {
 export async function getCourseNotes(courseId: string): Promise<NotesMap> {
   if (cache.has(courseId)) return cache.get(courseId)!;
 
-  const pdfPath = getPdfPath(courseId);
-  if (!pdfPath || !fs.existsSync(pdfPath)) {
+  const objectKey = getPdfObjectKey(courseId);
+  if (!objectKey) {
     cache.set(courseId, {});
     return {};
   }
 
+  let pdfBytes: Uint8Array | null = null;
   try {
-    const text = await extractPdfText(pdfPath);
+    if (hasR2Config) {
+      pdfBytes = await getObjectBytes(objectKey);
+    } else {
+      const pdfPath = getPdfPath(courseId);
+      if (pdfPath && fs.existsSync(pdfPath)) {
+        pdfBytes = fs.readFileSync(pdfPath);
+      }
+    }
+  } catch (err) {
+    console.error(`[pdf-notes] Failed to fetch ${objectKey}:`, err);
+  }
+
+  // Don't cache a fetch failure — it may be a transient R2 error, and we
+  // want the next request to retry rather than be stuck empty until restart.
+  if (!pdfBytes) {
+    return {};
+  }
+
+  try {
+    const text = await extractPdfText(pdfBytes);
     const units = parseUnits(text);
     const course = courses.find(c => c.id === courseId);
     if (!course || units.length === 0) {
@@ -105,8 +125,9 @@ export async function getCourseNotes(courseId: string): Promise<NotesMap> {
     cache.set(courseId, result);
     return result;
   } catch (err) {
-    console.error(`[pdf-notes] Failed to parse ${pdfPath}:`, err);
-    cache.set(courseId, {});
+    console.error(`[pdf-notes] Failed to parse ${objectKey}:`, err);
+    // Don't cache — the fetched bytes may have been a partial/corrupted
+    // transfer, so let the next request retry instead of staying empty.
     return {};
   }
 }
