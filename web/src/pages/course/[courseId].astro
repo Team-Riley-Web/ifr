@@ -35,7 +35,7 @@ const courseData = {
 };
 ---
 <Layout title={course.title}>
-  <div class="flex min-h-screen flex-col overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(214,168,79,0.14),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(79,70,229,0.12),transparent_30%),linear-gradient(135deg,#050816_0%,#0b1220_45%,#111827_100%)] pb-24 lg:h-screen lg:flex-row lg:overflow-hidden lg:pb-0">
+  <div class="flex h-dvh min-h-screen flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(214,168,79,0.14),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(79,70,229,0.12),transparent_30%),linear-gradient(135deg,#050816_0%,#0b1220_45%,#111827_100%)] pb-20 lg:h-screen lg:flex-row lg:pb-0">
 
     <!-- Sidebar -->
     <aside class="hidden flex-shrink-0 flex-col overflow-hidden border-r border-white/10 bg-slate-950/80 shadow-2xl shadow-black/30 backdrop-blur-xl lg:flex lg:h-auto lg:w-72">
@@ -91,7 +91,7 @@ const courseData = {
     </aside>
 
     <!-- Main content -->
-    <main class="flex min-h-0 flex-1 flex-col overflow-visible lg:overflow-hidden">
+    <main class="flex min-h-0 flex-1 flex-col overflow-hidden">
       <!-- Top bar -->
       <div class="flex flex-shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-slate-950/75 px-4 py-3 shadow-2xl shadow-black/20 backdrop-blur-xl lg:px-6">
         <a href="/dashboard" class="flex items-center gap-2 text-sm font-medium text-slate-300 transition hover:text-white lg:hidden">
@@ -136,15 +136,15 @@ const courseData = {
       </div>
 
       <!-- Video area -->
-      <div class="flex min-h-0 flex-1 flex-col overflow-visible lg:overflow-auto">
+      <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
         <!-- Tab bar -->
         <div id="tab-bar" class="flex flex-shrink-0 gap-1 overflow-x-auto border-b border-white/10 bg-slate-950/65 px-3 backdrop-blur lg:px-6">
         </div>
 
         <!-- Player + Notes (scrollable) -->
-        <div class="min-h-0 flex-1 overflow-visible lg:overflow-auto">
+        <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
           <!-- Video -->
-          <div class="flex aspect-video w-full items-center justify-center overflow-hidden bg-black lg:min-h-[52vh] lg:aspect-auto">
+          <div class="flex aspect-video w-full flex-shrink-0 items-center justify-center overflow-hidden bg-black lg:h-[52vh] lg:aspect-auto">
             <video
               id="player"
               controls
@@ -157,7 +157,7 @@ const courseData = {
           </div>
 
           <!-- Notes section -->
-          <div id="notes-section" class="hidden border-t border-white/10 bg-slate-950/75 px-4 py-5 backdrop-blur sm:px-8 sm:py-6">
+          <div id="notes-section" class="hidden min-h-0 flex-1 overflow-y-auto border-t border-white/10 bg-slate-950/75 px-4 py-5 backdrop-blur sm:px-8 sm:py-6">
             <div class="max-w-3xl">
               <h3 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -228,17 +228,20 @@ const courseData = {
     </div>
 
     <!-- Mobile bottom controls -->
-    <div class="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/90 px-3 py-3 shadow-[0_-8px_24px_rgba(0,0,0,0.35)] backdrop-blur-xl lg:hidden">
-      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+    <div class="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-slate-950/90 px-4 py-2.5 shadow-[0_-8px_24px_rgba(0,0,0,0.35)] backdrop-blur-xl lg:hidden">
+      <div class="grid grid-cols-[44px_1fr_44px] items-center gap-2">
         <button
           id="prev-lesson-btn"
-          class="flex min-h-11 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] px-3 text-sm font-medium text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+          class="flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Previous lesson"
         >
-          Previous
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
         </button>
         <button
           id="mobile-complete-btn"
-          class="flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 text-sm font-semibold transition-all"
+          class="flex h-11 min-w-0 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-all"
         >
           <svg id="mobile-complete-icon" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -247,9 +250,12 @@ const courseData = {
         </button>
         <button
           id="next-lesson-btn"
-          class="flex min-h-11 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] px-3 text-sm font-medium text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+          class="flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Next lesson"
         >
-          Next
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 5 7 7-7 7"/>
+          </svg>
         </button>
       </div>
     </div>
@@ -409,7 +415,7 @@ const courseData = {
         ? 'bg-emerald-400/15 border-emerald-400/25 text-emerald-200 hover:bg-red-500/10 hover:border-red-400/25 hover:text-red-200'
         : 'bg-white/[0.06] border-white/10 text-slate-200 hover:bg-brand-500/10 hover:border-brand-500/30 hover:text-brand-100'
     }`;
-    const mobileClass = `flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 text-sm font-semibold transition-all ${
+    const mobileClass = `flex h-11 min-w-0 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-all ${
       done
         ? 'bg-emerald-400/15 border-emerald-400/25 text-emerald-200'
         : 'bg-gradient-to-r from-brand-500 via-amber-400 to-brand-600 border-brand-500 text-slate-950 hover:from-brand-600 hover:to-amber-500'
@@ -491,9 +497,14 @@ const courseData = {
     const idx = lessons.findIndex(l => l.id === currentLessonId);
     if (idx > 0) selectLesson(lessons[idx - 1].id);
   });
-  nextLessonBtn.addEventListener('click', () => {
+  nextLessonBtn.addEventListener('click', async () => {
     const idx = lessons.findIndex(l => l.id === currentLessonId);
-    if (idx >= 0 && idx < lessons.length - 1) selectLesson(lessons[idx + 1].id);
+    if (idx >= 0 && idx < lessons.length - 1) {
+      if (!progress[currentLessonId]) {
+        await setProgress(currentLessonId, true);
+      }
+      selectLesson(lessons[idx + 1].id);
+    }
   });
 
   mobileMenuBtn.addEventListener('click', openMobileMenu);

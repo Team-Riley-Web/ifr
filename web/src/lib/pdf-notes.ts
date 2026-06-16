@@ -145,30 +145,32 @@ export async function getCourseNotes(courseId: string): Promise<NotesMap> {
 
   try {
     const text = await extractPdfText(pdfBytes);
-    const units = parseUnits(text);
     const course = courses.find(c => c.id === courseId);
-    if (!course || units.length === 0) {
+    if (!course) {
       cache.set(courseId, {});
       return {};
     }
 
+    const units = parseUnits(text);
     const result: NotesMap = {};
 
-    for (const lesson of course.lessons) {
-      let bestScore = 0;
-      let bestBody = '';
+    if (units.length > 0) {
+      for (const lesson of course.lessons) {
+        let bestScore = 0;
+        let bestBody = '';
 
-      for (const unit of units) {
-        const score = titleSimilarity(lesson.title, unit.title);
-        if (score > bestScore) {
-          bestScore = score;
-          bestBody = unit.body;
+        for (const unit of units) {
+          const score = titleSimilarity(lesson.title, unit.title);
+          if (score > bestScore) {
+            bestScore = score;
+            bestBody = unit.body;
+          }
         }
-      }
 
-      // Only include if we have a decent match
-      if (bestScore >= 0.4 && bestBody.trim().length > 20) {
-        result[lesson.id] = bestBody.trim();
+        // Only include if we have a decent match
+        if (bestScore >= 0.4 && bestBody.trim().length > 20) {
+          result[lesson.id] = bestBody.trim();
+        }
       }
     }
 
