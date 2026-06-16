@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import type { Lesson } from './courses';
 import { getPdfObjectKey, getPdfPath, courses } from './courses';
 import { getObjectBytes, hasR2Config } from './r2';
 
@@ -42,8 +43,13 @@ function titleSimilarity(a: string, b: string): number {
   return matches / wordsA.length;
 }
 
+function getSignificantWords(title: string): string[] {
+  const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'in', 'of', 'to', 'for', 'as', 'at']);
+  return normalize(title).split(' ').filter(w => w.length > 1 && !stopWords.has(w));
+}
+
 function parseUnits(text: string): Array<{ title: string; body: string }> {
-  const unitPattern = /Unit\s+\d+\s*:/gi;
+  const unitPattern = /\b(?:Unit|Lesson)\s+\d+\s*[:.-]?/gi;
   const parts = text.split(unitPattern);
   const matches = [...text.matchAll(unitPattern)];
 
@@ -51,10 +57,7 @@ function parseUnits(text: string): Array<{ title: string; body: string }> {
 
   for (let i = 0; i < matches.length; i++) {
     const raw = (parts[i + 1] ?? '').trim();
-    // Title ends at first double-space or first newline — whichever comes first
-    const doubleSpace = raw.indexOf('  ');
-    const newline = raw.indexOf('\n');
-    const splitAt = [doubleSpace, newline].filter(n => n > 0).sort((a, b) => a - b)[0] ?? -1;
+    const splitAt = findTitleSplit(raw);
 
     const title = splitAt > 0 ? raw.slice(0, splitAt).trim() : raw.slice(0, 80).trim();
     const body = splitAt > 0 ? raw.slice(splitAt).trim() : '';
@@ -62,6 +65,53 @@ function parseUnits(text: string): Array<{ title: string; body: string }> {
   }
 
   return units;
+}
+
+function findTitleSplit(raw: string): number {
+  // PDF extraction can flatten line breaks, so support both actual newlines
+  // and the wider spacing that usually appears between a heading and body.
+  const newline = raw.indexOf('\n');
+  const doubleSpace = raw.search(/\s{2,}/);
+  const sentence = raw.search(/[.!?]\s+[A-Z]/);
+  return [newline, doubleSpace, sentence > 0 ? sentence + 1 : -1]
+    .filter(n => n > 0)
+    .sort((a, b) => a - b)[0] ?? -1;
+}
+
+function makeTitleRegex(title: string): RegExp | null {
+  const words = getSignificantWords(title).slice(0, 5);
+  if (words.length === 0) return null;
+  const escaped = words.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(escaped.join('[\\s\\S]{0,80}?'), 'i');
+}
+
+function parseByLessonTitles(text: string, lessons: Lesson[]): NotesMap {
+  const positions = lessons
+    .map((lesson) => {
+      const regex = makeTitleRegex(lesson.title);
+      const match = regex?.exec(text);
+      return match ? { lessonId: lesson.id, start: match.index, bodyStart: match.index + match[0].length } : null;
+    })
+    .filter((item): item is { lessonId: string; start: number; bodyStart: number } => item !== null)
+    .sort((a, b) => a.start - b.start);
+
+  const result: NotesMap = {};
+
+  for (let i = 0; i < positions.length; i++) {
+    const current = positions[i]!;
+    const next = positions[i + 1];
+    const body = text
+      .slice(current.bodyStart, next ? next.start : undefined)
+      .replace(/\s{3,}/g, '\n\n')
+      .replace(/[ \t]{2,}/g, ' ')
+      .trim();
+
+    if (body.length > 20) {
+      result[current.lessonId] = body;
+    }
+  }
+
+  return result;
 }
 
 export async function getCourseNotes(courseId: string): Promise<NotesMap> {
@@ -122,8 +172,11 @@ export async function getCourseNotes(courseId: string): Promise<NotesMap> {
       }
     }
 
-    cache.set(courseId, result);
-    return result;
+    const titleBasedNotes = parseByLessonTitles(text, course.lessons);
+    const merged = { ...titleBasedNotes, ...result };
+
+    cache.set(courseId, merged);
+    return merged;
   } catch (err) {
     console.error(`[pdf-notes] Failed to parse ${objectKey}:`, err);
     // Don't cache — the fetched bytes may have been a partial/corrupted
