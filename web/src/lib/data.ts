@@ -42,6 +42,16 @@ export async function hasUsers(): Promise<boolean> {
   return row.count > 0;
 }
 
+export async function listUsers(): Promise<Array<{ id: number; username: string; isAdmin: boolean }>> {
+  if (isNetlify) {
+    return (await getUsers()).map(({ id, username, isAdmin }) => ({ id, username, isAdmin }));
+  }
+
+  const rows = getDb().prepare('SELECT id, username, is_admin FROM users ORDER BY id').all() as
+    { id: number; username: string; is_admin: number }[];
+  return rows.map(row => ({ id: row.id, username: row.username, isAdmin: row.is_admin === 1 }));
+}
+
 export async function createUser(username: string, passwordHash: string, isAdmin = false): Promise<void> {
   if (isNetlify) {
     const users = await getUsers();
