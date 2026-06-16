@@ -1,0 +1,21 @@
+.DS_Store
+.claude/
+
+# Course files are uploaded to R2 and must not be committed to GitHub.
+/01. Core Skills/
+/02. Seven Worlds/
+/03. Pure Harmony Essentials/
+/04. Chord Melody/
+/05. Chord Melody 2/
+/06. Violin Looping/
+
+# Dependencies, local state, generated output, and secrets.
+/node_modules/
+/web/node_modules/
+/web/.astro/
+/web/.netlify/
+/web/dist/
+/web/data/
+/web/.env
+/web/.env.*
+!/web/.env.example

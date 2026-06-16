@@ -1,0 +1,3 @@
+[build]
+  command = "npm --prefix web run build"
+  publish = "web/dist"

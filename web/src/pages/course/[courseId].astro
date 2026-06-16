@@ -1,0 +1,328 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCourse } from '../../lib/courses';
+import { getCourseNotes } from '../../lib/pdf-notes';
+import { getProgress } from '../../lib/data';
+
+const { courseId } = Astro.params;
+const course = getCourse(courseId ?? '');
+if (!course) return Astro.redirect('/dashboard');
+
+const user = Astro.locals.user!;
+
+const progressMap = (await getProgress(user.id))[course.id] ?? {};
+
+const initialLesson = course.lessons.find(l => !progressMap[l.id]) ?? course.lessons[0]!;
+const courseNotes = await getCourseNotes(course.id);
+
+// Serializable course data for client script
+const courseData = {
+  id: course.id,
+  lessons: course.lessons.map(l => ({
+    id: l.id,
+    title: l.title,
+    tabs: l.tabs.map(t => ({
+      id: t.id,
+      label: t.label,
+      files: t.files.map(f => ({ label: f.label, type: f.type })),
+    })),
+  })),
+};
+---
+<Layout title={course.title}>
+  <div class="flex h-screen overflow-hidden bg-slate-50">
+
+    <!-- Sidebar -->
+    <aside class="w-72 bg-sidebar flex-shrink-0 flex flex-col overflow-hidden">
+      <!-- Sidebar header -->
+      <div class="px-5 py-5 border-b border-white/10">
+        <a href="/dashboard" class="flex items-center gap-2 text-slate-400 hover:text-white transition text-sm mb-4">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          All Courses
+        </a>
+        <h2 class="text-white font-bold text-base leading-snug">{course.title}</h2>
+        <p class="text-slate-400 text-xs mt-1">{course.lessons.length} lessons</p>
+      </div>
+
+      <!-- PDF link -->
+      <div class="px-5 py-3 border-b border-white/10">
+        <a
+          href={`/api/pdf/${course.id}`}
+          target="_blank"
+          rel="noopener"
+          class="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition"
+        >
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Course PDF
+        </a>
+      </div>
+
+      <!-- Lesson list -->
+      <nav class="flex-1 overflow-y-auto py-3 px-2" id="lesson-nav">
+        {course.lessons.map((lesson, idx) => (
+          <button
+            data-lesson-id={lesson.id}
+            class:list={[
+              'lesson-btn w-full text-left px-3 py-3 rounded-lg mb-0.5 flex items-center gap-3 transition-all group',
+              lesson.id === initialLesson.id ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5',
+            ]}
+          >
+            <!-- Completion indicator -->
+            <span class:list={[
+              'flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs transition-all',
+              progressMap[lesson.id]
+                ? 'bg-green-500 border-green-500 text-white'
+                : 'border-slate-500 text-slate-600 group-hover:border-slate-400',
+            ]} data-check={lesson.id}>
+              {progressMap[lesson.id]
+                ? <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                : <span class="text-xs leading-none">{idx + 1}</span>
+              }
+            </span>
+            <span class="text-sm leading-snug">{lesson.title}</span>
+          </button>
+        ))}
+      </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+      <!-- Top bar -->
+      <div class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
+        <div>
+          <h1 id="lesson-title" class="text-base font-semibold text-slate-800">{initialLesson.title}</h1>
+          <p id="lesson-num" class="text-xs text-slate-400">
+            Lesson {course.lessons.findIndex(l => l.id === initialLesson.id) + 1} of {course.lessons.length}
+          </p>
+        </div>
+        <button
+          id="complete-btn"
+          class="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border transition-all"
+        >
+          <svg id="complete-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          <span id="complete-label">Mark Complete</span>
+        </button>
+      </div>
+
+      <!-- Video area -->
+      <div class="flex-1 flex flex-col overflow-auto">
+        <!-- Tab bar -->
+        <div id="tab-bar" class="bg-white border-b border-slate-200 px-6 flex gap-1 overflow-x-auto flex-shrink-0">
+        </div>
+
+        <!-- Player + Notes (scrollable) -->
+        <div class="flex-1 overflow-auto">
+          <!-- Video -->
+          <div class="bg-black flex items-center justify-center" style="min-height: 52vh;">
+            <video
+              id="player"
+              controls
+              class="w-full max-h-[70vh]"
+              preload="metadata"
+            ></video>
+            <!-- Audio player (hidden, shown for audio tabs) -->
+            <div id="audio-panel" class="hidden w-full flex-col items-center justify-center gap-4 p-8 bg-slate-900" style="min-height: 52vh;">
+            </div>
+          </div>
+
+          <!-- Notes section -->
+          <div id="notes-section" class="bg-white border-t border-slate-200 px-8 py-6 hidden">
+            <div class="max-w-3xl">
+              <h3 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Course Notes
+              </h3>
+              <p id="notes-content" class="text-slate-700 text-sm leading-relaxed"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</Layout>
+
+<script define:vars={{ courseData, initialLessonId: initialLesson.id, serverProgress: progressMap, courseId: course.id, courseNotes }}>
+  // All lesson/tab state lives here
+  const lessons = courseData.lessons;
+  let currentLessonId = initialLessonId;
+  let currentTabId = null;
+  let progress = { ...serverProgress };
+
+  const player = document.getElementById('player');
+  const audioPanel = document.getElementById('audio-panel');
+  const tabBar = document.getElementById('tab-bar');
+  const lessonTitle = document.getElementById('lesson-title');
+  const lessonNum = document.getElementById('lesson-num');
+  const completeBtn = document.getElementById('complete-btn');
+  const completeLabel = document.getElementById('complete-label');
+  const completeIcon = document.getElementById('complete-icon');
+  const notesSection = document.getElementById('notes-section');
+  const notesContent = document.getElementById('notes-content');
+
+  function getLesson(id) {
+    return lessons.find(l => l.id === id);
+  }
+
+  function mediaUrl(lessonId, tabId, fileIndex) {
+    return `/api/media/${courseId}/${lessonId}/${tabId}/${fileIndex}`;
+  }
+
+  function renderTabs(lesson) {
+    tabBar.innerHTML = '';
+    lesson.tabs.forEach(tab => {
+      const btn = document.createElement('button');
+      btn.className = `tab-btn px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+        tab.id === currentTabId
+          ? 'border-indigo-500 text-indigo-600'
+          : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+      }`;
+      btn.textContent = tab.label;
+      btn.dataset.tabId = tab.id;
+      btn.addEventListener('click', () => selectTab(lesson, tab.id));
+      tabBar.appendChild(btn);
+    });
+  }
+
+  function selectTab(lesson, tabId) {
+    currentTabId = tabId;
+    renderTabs(lesson);
+
+    const tab = lesson.tabs.find(t => t.id === tabId);
+    const isAudio = tab?.files.every(f => f.type === 'audio');
+
+    if (isAudio) {
+      player.classList.add('hidden');
+      audioPanel.classList.remove('hidden');
+      audioPanel.classList.add('flex');
+      renderAudioPanel(lesson.id, tab);
+    } else {
+      audioPanel.classList.add('hidden');
+      audioPanel.classList.remove('flex');
+      player.classList.remove('hidden');
+      if (tab?.files[0]) {
+        const src = mediaUrl(lesson.id, tabId, 0);
+        if (player.src !== src) {
+          player.src = src;
+          player.load();
+        }
+      }
+    }
+  }
+
+  function renderAudioPanel(lessonId, tab) {
+    audioPanel.innerHTML = '';
+    tab.files.forEach((file, i) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'w-full max-w-lg bg-slate-800 rounded-xl p-5';
+      wrapper.innerHTML = `
+        <p class="text-slate-300 text-sm font-medium mb-3">${file.label}</p>
+        <audio controls src="${mediaUrl(lessonId, tab.id, i)}" class="w-full" preload="metadata"></audio>
+      `;
+      audioPanel.appendChild(wrapper);
+    });
+  }
+
+  function selectLesson(lessonId) {
+    currentLessonId = lessonId;
+    const lesson = getLesson(lessonId);
+    if (!lesson) return;
+
+    // Update title
+    const idx = lessons.findIndex(l => l.id === lessonId);
+    lessonTitle.textContent = lesson.title;
+    lessonNum.textContent = `Lesson ${idx + 1} of ${lessons.length}`;
+
+    // Update sidebar
+    document.querySelectorAll('.lesson-btn').forEach(btn => {
+      const id = btn.dataset.lessonId;
+      const isActive = id === lessonId;
+      btn.className = `lesson-btn w-full text-left px-3 py-3 rounded-lg mb-0.5 flex items-center gap-3 transition-all group ${
+        isActive ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'
+      }`;
+    });
+
+    // Default to main tab
+    currentTabId = lesson.tabs[0]?.id ?? null;
+    renderTabs(lesson);
+    selectTab(lesson, currentTabId);
+
+    updateCompleteBtn(lessonId);
+    updateNotes(lessonId);
+  }
+
+  function updateNotes(lessonId) {
+    const note = courseNotes[lessonId];
+    if (note && notesContent && notesSection) {
+      notesContent.textContent = note;
+      notesSection.classList.remove('hidden');
+    } else if (notesSection) {
+      notesSection.classList.add('hidden');
+    }
+  }
+
+  function updateCompleteBtn(lessonId) {
+    const done = !!progress[lessonId];
+    completeBtn.className = `flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg border transition-all ${
+      done
+        ? 'bg-green-50 border-green-200 text-green-700 hover:bg-red-50 hover:border-red-200 hover:text-red-600'
+        : 'bg-white border-slate-200 text-slate-600 hover:bg-brand-50 hover:border-brand-200 hover:text-brand-600'
+    }`;
+    completeLabel.textContent = done ? 'Completed' : 'Mark Complete';
+  }
+
+  function updateSidebarCheck(lessonId, done) {
+    const checkEl = document.querySelector(`[data-check="${lessonId}"]`);
+    if (!checkEl) return;
+    if (done) {
+      checkEl.className = 'flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs transition-all bg-green-500 border-green-500 text-white';
+      checkEl.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>`;
+    } else {
+      const idx = lessons.findIndex(l => l.id === lessonId);
+      checkEl.className = 'flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs transition-all border-slate-500 text-slate-600';
+      checkEl.innerHTML = `<span class="text-xs leading-none">${idx + 1}</span>`;
+    }
+  }
+
+  async function setProgress(lessonId, completed) {
+    progress[lessonId] = completed;
+    updateCompleteBtn(lessonId);
+    updateSidebarCheck(lessonId, completed);
+    await fetch('/api/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courseId, lessonId, completed }),
+    });
+  }
+
+  // Auto-complete at 90%
+  let autoCompleted = false;
+  player.addEventListener('timeupdate', () => {
+    if (autoCompleted) return;
+    const lesson = getLesson(currentLessonId);
+    if (!lesson || progress[currentLessonId]) return;
+    if (player.duration && player.currentTime / player.duration >= 0.9) {
+      autoCompleted = true;
+      setProgress(currentLessonId, true);
+    }
+  });
+
+  player.addEventListener('loadstart', () => { autoCompleted = false; });
+
+  // Manual toggle
+  completeBtn.addEventListener('click', () => {
+    const done = !!progress[currentLessonId];
+    setProgress(currentLessonId, !done);
+  });
+
+  // Lesson nav
+  document.querySelectorAll('.lesson-btn').forEach(btn => {
+    btn.addEventListener('click', () => selectLesson(btn.dataset.lessonId));
+  });
+
+  // Init
+  selectLesson(initialLessonId);
+</script>
