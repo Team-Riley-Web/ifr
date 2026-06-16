@@ -11,6 +11,7 @@
 
 # Dependencies, local state, generated output, and secrets.
 /node_modules/
+/.netlify/
 /web/node_modules/
 /web/.astro/
 /web/.netlify/

@@ -21,7 +21,10 @@ interface SessionUser {
 
 type Progress = Record<string, Record<string, boolean>>;
 
-const isNetlify = process.env.NETLIFY === 'true';
+// process.env.NETLIFY is only set during the build step, not at function
+// runtime. NETLIFY_BLOBS_CONTEXT is what @netlify/blobs itself relies on to
+// auto-configure, so it's the reliable signal for "Blobs is usable here".
+const isNetlify = Boolean(process.env.NETLIFY_BLOBS_CONTEXT);
 const SESSION_STORE = 'ifr-sessions';
 const DATA_STORE = 'ifr-data';
 
