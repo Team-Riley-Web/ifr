@@ -30,22 +30,22 @@ const courseData = {
 };
 ---
 <Layout title={course.title}>
-  <div class="flex min-h-screen flex-col overflow-y-auto bg-slate-50 lg:h-screen lg:flex-row lg:overflow-hidden">
+  <div class="flex min-h-screen flex-col overflow-x-hidden bg-slate-50 pb-24 lg:h-screen lg:flex-row lg:overflow-hidden lg:pb-0">
 
     <!-- Sidebar -->
-    <aside class="flex max-h-[38vh] w-full flex-shrink-0 flex-col overflow-hidden bg-sidebar lg:h-auto lg:max-h-none lg:w-72">
+    <aside class="hidden flex-shrink-0 flex-col overflow-hidden bg-sidebar lg:flex lg:h-auto lg:w-72">
       <!-- Sidebar header -->
-      <div class="border-b border-white/10 px-4 py-3 lg:px-5 lg:py-5">
-        <a href="/dashboard" class="mb-3 flex items-center gap-2 text-sm text-slate-400 transition hover:text-white lg:mb-4">
+      <div class="border-b border-white/10 px-4 py-2.5 lg:px-5 lg:py-5">
+        <a href="/dashboard" class="mb-2 flex items-center gap-2 text-sm text-slate-400 transition hover:text-white lg:mb-4">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
           All Courses
         </a>
-        <h2 class="max-h-12 overflow-hidden text-base font-bold leading-snug text-white lg:max-h-none">{course.title}</h2>
+        <h2 class="line-clamp-2 text-sm font-bold leading-snug text-white sm:text-base lg:line-clamp-none">{course.title}</h2>
         <p class="text-slate-400 text-xs mt-1">{course.lessons.length} lessons</p>
       </div>
 
       <!-- PDF link -->
-      <div class="border-b border-white/10 px-4 py-3 lg:px-5">
+      <div class="border-b border-white/10 px-4 py-2.5 lg:px-5 lg:py-3">
         <a
           href={`/api/pdf/${course.id}`}
           target="_blank"
@@ -58,12 +58,12 @@ const courseData = {
       </div>
 
       <!-- Lesson list -->
-      <nav class="flex-1 overflow-y-auto px-2 py-2 lg:py-3" id="lesson-nav">
+      <nav class="flex-1 overflow-y-auto px-2 py-1.5 lg:py-3" id="lesson-nav">
         {course.lessons.map((lesson, idx) => (
           <button
             data-lesson-id={lesson.id}
             class:list={[
-              'lesson-btn w-full text-left px-3 py-3 rounded-lg mb-0.5 flex items-center gap-3 transition-all group',
+              'lesson-btn w-full text-left px-3 py-2.5 rounded-lg mb-0.5 flex items-center gap-3 transition-all group lg:py-3',
               lesson.id === initialLesson.id ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5',
             ]}
           >
@@ -89,33 +89,57 @@ const courseData = {
     <main class="flex min-h-0 flex-1 flex-col overflow-visible lg:overflow-hidden">
       <!-- Top bar -->
       <div class="flex flex-shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:px-6">
-        <div class="min-w-0">
-          <h1 id="lesson-title" class="text-base font-semibold text-slate-800">{initialLesson.title}</h1>
+        <a href="/dashboard" class="flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-800 lg:hidden">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+          All Courses
+        </a>
+        <div class="hidden min-w-0 flex-1 lg:block">
+          <h1 id="lesson-title" class="text-sm font-semibold leading-snug text-slate-800 sm:text-base">{initialLesson.title}</h1>
           <p id="lesson-num" class="text-xs text-slate-400">
             Lesson {course.lessons.findIndex(l => l.id === initialLesson.id) + 1} of {course.lessons.length}
           </p>
         </div>
         <button
           id="complete-btn"
-          class="flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all sm:px-4"
+          class="hidden min-h-10 shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all sm:px-4 lg:flex"
         >
           <svg id="complete-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
           </svg>
           <span id="complete-label">Mark Complete</span>
         </button>
+        <button
+          id="mobile-menu-btn"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 lg:hidden"
+          aria-label="Open lesson menu"
+          aria-controls="mobile-lesson-menu"
+          aria-expanded="false"
+        >
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
+        <h1 id="mobile-lesson-title" class="text-base font-semibold leading-snug text-slate-800">{initialLesson.title}</h1>
+        <p id="mobile-lesson-num" class="mt-1 text-xs text-slate-400">
+          Lesson {course.lessons.findIndex(l => l.id === initialLesson.id) + 1} of {course.lessons.length}
+        </p>
       </div>
 
       <!-- Video area -->
       <div class="flex min-h-0 flex-1 flex-col overflow-visible lg:overflow-auto">
         <!-- Tab bar -->
-        <div id="tab-bar" class="flex flex-shrink-0 gap-1 overflow-x-auto border-b border-slate-200 bg-white px-4 lg:px-6">
+        <div id="tab-bar" class="flex flex-shrink-0 gap-1 overflow-x-auto border-b border-slate-200 bg-white px-3 lg:px-6">
         </div>
 
         <!-- Player + Notes (scrollable) -->
         <div class="min-h-0 flex-1 overflow-visible lg:overflow-auto">
           <!-- Video -->
-          <div class="flex aspect-video w-full items-center justify-center overflow-y-auto bg-black lg:min-h-[52vh] lg:aspect-auto">
+          <div class="flex aspect-video w-full items-center justify-center overflow-hidden bg-black lg:min-h-[52vh] lg:aspect-auto">
             <video
               id="player"
               controls
@@ -128,7 +152,7 @@ const courseData = {
           </div>
 
           <!-- Notes section -->
-          <div id="notes-section" class="hidden border-t border-slate-200 bg-white px-4 py-6 sm:px-8">
+          <div id="notes-section" class="hidden border-t border-slate-200 bg-white px-4 py-5 sm:px-8 sm:py-6">
             <div class="max-w-3xl">
               <h3 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -142,6 +166,92 @@ const courseData = {
         </div>
       </div>
     </main>
+
+    <!-- Mobile lesson menu -->
+    <div id="mobile-lesson-menu" class="fixed inset-0 z-50 hidden lg:hidden" role="dialog" aria-modal="true">
+      <button id="mobile-menu-backdrop" class="absolute inset-0 bg-slate-950/50" aria-label="Close lesson menu"></button>
+      <aside class="absolute inset-y-0 right-0 flex w-[86vw] max-w-sm flex-col overflow-hidden bg-sidebar shadow-2xl">
+        <div class="border-b border-white/10 px-4 py-4">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <a href="/dashboard" class="flex items-center gap-2 text-sm text-slate-400 transition hover:text-white">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+              All Courses
+            </a>
+            <button id="mobile-menu-close" class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white" aria-label="Close lesson menu">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <h2 class="line-clamp-2 text-base font-bold leading-snug text-white">{course.title}</h2>
+          <p class="mt-1 text-xs text-slate-400">{course.lessons.length} lessons</p>
+        </div>
+
+        <div class="border-b border-white/10 px-4 py-3">
+          <a
+            href={`/api/pdf/${course.id}`}
+            target="_blank"
+            rel="noopener"
+            class="flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
+          >
+            <svg class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Course PDF
+          </a>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto px-2 py-3" id="mobile-lesson-nav">
+          {course.lessons.map((lesson, idx) => (
+            <button
+              data-lesson-id={lesson.id}
+              class:list={[
+                'lesson-btn w-full text-left px-3 py-3 rounded-lg mb-0.5 flex items-center gap-3 transition-all group',
+                lesson.id === initialLesson.id ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5',
+              ]}
+            >
+              <span class:list={[
+                'flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs transition-all',
+                progressMap[lesson.id]
+                  ? 'bg-green-500 border-green-500 text-white'
+                  : 'border-slate-500 text-slate-600 group-hover:border-slate-400',
+              ]} data-check={lesson.id}>
+                {progressMap[lesson.id]
+                  ? <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                  : <span class="text-xs leading-none">{idx + 1}</span>
+                }
+              </span>
+              <span class="text-sm leading-snug">{lesson.title}</span>
+            </button>
+          ))}
+        </nav>
+      </aside>
+    </div>
+
+    <!-- Mobile bottom controls -->
+    <div class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden">
+      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <button
+          id="prev-lesson-btn"
+          class="flex min-h-11 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Previous
+        </button>
+        <button
+          id="mobile-complete-btn"
+          class="flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 text-sm font-semibold transition-all"
+        >
+          <svg id="mobile-complete-icon" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          <span id="mobile-complete-label">Mark Complete</span>
+        </button>
+        <button
+          id="next-lesson-btn"
+          class="flex min-h-11 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Next
+        </button>
+      </div>
+    </div>
   </div>
 </Layout>
 
@@ -157,9 +267,20 @@ const courseData = {
   const tabBar = document.getElementById('tab-bar');
   const lessonTitle = document.getElementById('lesson-title');
   const lessonNum = document.getElementById('lesson-num');
+  const mobileLessonTitle = document.getElementById('mobile-lesson-title');
+  const mobileLessonNum = document.getElementById('mobile-lesson-num');
   const completeBtn = document.getElementById('complete-btn');
   const completeLabel = document.getElementById('complete-label');
   const completeIcon = document.getElementById('complete-icon');
+  const mobileCompleteBtn = document.getElementById('mobile-complete-btn');
+  const mobileCompleteLabel = document.getElementById('mobile-complete-label');
+  const mobileCompleteIcon = document.getElementById('mobile-complete-icon');
+  const prevLessonBtn = document.getElementById('prev-lesson-btn');
+  const nextLessonBtn = document.getElementById('next-lesson-btn');
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const mobileLessonMenu = document.getElementById('mobile-lesson-menu');
+  const mobileMenuBackdrop = document.getElementById('mobile-menu-backdrop');
+  const mobileMenuClose = document.getElementById('mobile-menu-close');
   const notesSection = document.getElementById('notes-section');
   const notesContent = document.getElementById('notes-content');
 
@@ -235,12 +356,14 @@ const courseData = {
     const idx = lessons.findIndex(l => l.id === lessonId);
     lessonTitle.textContent = lesson.title;
     lessonNum.textContent = `Lesson ${idx + 1} of ${lessons.length}`;
+    mobileLessonTitle.textContent = lesson.title;
+    mobileLessonNum.textContent = `Lesson ${idx + 1} of ${lessons.length}`;
 
     // Update sidebar
     document.querySelectorAll('.lesson-btn').forEach(btn => {
       const id = btn.dataset.lessonId;
       const isActive = id === lessonId;
-      btn.className = `lesson-btn w-full text-left px-3 py-3 rounded-lg mb-0.5 flex items-center gap-3 transition-all group ${
+      btn.className = `lesson-btn w-full text-left px-3 py-2.5 rounded-lg mb-0.5 flex items-center gap-3 transition-all group lg:py-3 ${
         isActive ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'
       }`;
     });
@@ -251,7 +374,9 @@ const courseData = {
     selectTab(lesson, currentTabId);
 
     updateCompleteBtn(lessonId);
+    updateLessonControls(lessonId);
     updateNotes(lessonId);
+    closeMobileMenu();
   }
 
   function updateNotes(lessonId) {
@@ -266,25 +391,52 @@ const courseData = {
 
   function updateCompleteBtn(lessonId) {
     const done = !!progress[lessonId];
-    completeBtn.className = `flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all sm:px-4 ${
+    const desktopClass = `hidden min-h-10 shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all sm:px-4 lg:flex ${
       done
         ? 'bg-green-50 border-green-200 text-green-700 hover:bg-red-50 hover:border-red-200 hover:text-red-600'
         : 'bg-white border-slate-200 text-slate-600 hover:bg-brand-50 hover:border-brand-200 hover:text-brand-600'
     }`;
+    const mobileClass = `flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 text-sm font-semibold transition-all ${
+      done
+        ? 'bg-green-50 border-green-200 text-green-700'
+        : 'bg-brand-600 border-brand-600 text-white hover:bg-brand-700 hover:border-brand-700'
+    }`;
+
+    completeBtn.className = desktopClass;
     completeLabel.textContent = done ? 'Completed' : 'Mark Complete';
+    mobileCompleteBtn.className = mobileClass;
+    mobileCompleteLabel.textContent = done ? 'Completed' : 'Mark Complete';
   }
 
   function updateSidebarCheck(lessonId, done) {
-    const checkEl = document.querySelector(`[data-check="${lessonId}"]`);
-    if (!checkEl) return;
-    if (done) {
-      checkEl.className = 'flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs transition-all bg-green-500 border-green-500 text-white';
-      checkEl.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>`;
-    } else {
-      const idx = lessons.findIndex(l => l.id === lessonId);
-      checkEl.className = 'flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs transition-all border-slate-500 text-slate-600';
-      checkEl.innerHTML = `<span class="text-xs leading-none">${idx + 1}</span>`;
-    }
+    document.querySelectorAll(`[data-check="${lessonId}"]`).forEach(checkEl => {
+      if (done) {
+        checkEl.className = 'flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs transition-all bg-green-500 border-green-500 text-white';
+        checkEl.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>`;
+      } else {
+        const idx = lessons.findIndex(l => l.id === lessonId);
+        checkEl.className = 'flex-shrink-0 w-5 h-5 rounded-full border flex items-center justify-center text-xs transition-all border-slate-500 text-slate-600';
+        checkEl.innerHTML = `<span class="text-xs leading-none">${idx + 1}</span>`;
+      }
+    });
+  }
+
+  function updateLessonControls(lessonId) {
+    const idx = lessons.findIndex(l => l.id === lessonId);
+    prevLessonBtn.disabled = idx <= 0;
+    nextLessonBtn.disabled = idx === -1 || idx >= lessons.length - 1;
+  }
+
+  function openMobileMenu() {
+    mobileLessonMenu.classList.remove('hidden');
+    mobileMenuBtn.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('overflow-hidden');
+  }
+
+  function closeMobileMenu() {
+    mobileLessonMenu.classList.add('hidden');
+    mobileMenuBtn.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('overflow-hidden');
   }
 
   async function setProgress(lessonId, completed) {
@@ -316,6 +468,26 @@ const courseData = {
   completeBtn.addEventListener('click', () => {
     const done = !!progress[currentLessonId];
     setProgress(currentLessonId, !done);
+  });
+  mobileCompleteBtn.addEventListener('click', () => {
+    const done = !!progress[currentLessonId];
+    setProgress(currentLessonId, !done);
+  });
+
+  prevLessonBtn.addEventListener('click', () => {
+    const idx = lessons.findIndex(l => l.id === currentLessonId);
+    if (idx > 0) selectLesson(lessons[idx - 1].id);
+  });
+  nextLessonBtn.addEventListener('click', () => {
+    const idx = lessons.findIndex(l => l.id === currentLessonId);
+    if (idx >= 0 && idx < lessons.length - 1) selectLesson(lessons[idx + 1].id);
+  });
+
+  mobileMenuBtn.addEventListener('click', openMobileMenu);
+  mobileMenuBackdrop.addEventListener('click', closeMobileMenu);
+  mobileMenuClose.addEventListener('click', closeMobileMenu);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeMobileMenu();
   });
 
   // Lesson nav
