@@ -20,7 +20,117 @@ export interface CourseNotesDebug {
   error?: string;
 }
 
+class ServerDOMMatrix {
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+  e: number;
+  f: number;
+
+  constructor(init?: number[] | ServerDOMMatrix) {
+    if (Array.isArray(init)) {
+      [this.a, this.b, this.c, this.d, this.e, this.f] = [
+        init[0] ?? 1,
+        init[1] ?? 0,
+        init[2] ?? 0,
+        init[3] ?? 1,
+        init[4] ?? 0,
+        init[5] ?? 0,
+      ];
+    } else if (init) {
+      this.a = init.a;
+      this.b = init.b;
+      this.c = init.c;
+      this.d = init.d;
+      this.e = init.e;
+      this.f = init.f;
+    } else {
+      this.a = 1;
+      this.b = 0;
+      this.c = 0;
+      this.d = 1;
+      this.e = 0;
+      this.f = 0;
+    }
+  }
+
+  multiplySelf(other: ServerDOMMatrix): this {
+    const a = this.a * other.a + this.c * other.b;
+    const b = this.b * other.a + this.d * other.b;
+    const c = this.a * other.c + this.c * other.d;
+    const d = this.b * other.c + this.d * other.d;
+    const e = this.a * other.e + this.c * other.f + this.e;
+    const f = this.b * other.e + this.d * other.f + this.f;
+    this.a = a;
+    this.b = b;
+    this.c = c;
+    this.d = d;
+    this.e = e;
+    this.f = f;
+    return this;
+  }
+
+  preMultiplySelf(other: ServerDOMMatrix): this {
+    return this.setMatrix(new ServerDOMMatrix(other).multiplySelf(this));
+  }
+
+  translateSelf(x = 0, y = 0): this {
+    return this.multiplySelf(new ServerDOMMatrix([1, 0, 0, 1, x, y]));
+  }
+
+  translate(x = 0, y = 0): ServerDOMMatrix {
+    return new ServerDOMMatrix(this).translateSelf(x, y);
+  }
+
+  scaleSelf(scaleX = 1, scaleY = scaleX): this {
+    return this.multiplySelf(new ServerDOMMatrix([scaleX, 0, 0, scaleY, 0, 0]));
+  }
+
+  scale(scaleX = 1, scaleY = scaleX): ServerDOMMatrix {
+    return new ServerDOMMatrix(this).scaleSelf(scaleX, scaleY);
+  }
+
+  invertSelf(): this {
+    const determinant = this.a * this.d - this.b * this.c;
+    if (determinant === 0) {
+      this.a = this.b = this.c = this.d = this.e = this.f = NaN;
+      return this;
+    }
+
+    const a = this.d / determinant;
+    const b = -this.b / determinant;
+    const c = -this.c / determinant;
+    const d = this.a / determinant;
+    const e = (this.c * this.f - this.d * this.e) / determinant;
+    const f = (this.b * this.e - this.a * this.f) / determinant;
+    this.a = a;
+    this.b = b;
+    this.c = c;
+    this.d = d;
+    this.e = e;
+    this.f = f;
+    return this;
+  }
+
+  private setMatrix(other: ServerDOMMatrix): this {
+    this.a = other.a;
+    this.b = other.b;
+    this.c = other.c;
+    this.d = other.d;
+    this.e = other.e;
+    this.f = other.f;
+    return this;
+  }
+}
+
+function ensurePdfJsServerGlobals() {
+  (globalThis as any).DOMMatrix ??= ServerDOMMatrix;
+}
+
 async function extractPdfText(data: Uint8Array): Promise<string> {
+  ensurePdfJsServerGlobals();
+
   // pdfjs-dist is installed as a dependency of pdf-parse
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore — no types for legacy build path
