@@ -11,6 +11,18 @@ async function extractPdfText(data: Uint8Array): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore — no types for legacy build path
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+
+  // pdfjs normally loads its worker via a dynamic `import(this.workerSrc)`
+  // with a computed (non-literal) specifier, which Netlify's function
+  // bundler can't statically trace — so pdf.worker.mjs never makes it into
+  // the deployed function and the import fails silently at runtime. Import
+  // it statically here and register it as the "main thread" worker so
+  // pdfjs skips that dynamic import entirely.
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore — no types for legacy build path
+  const pdfjsWorker = await import('pdfjs-dist/legacy/build/pdf.worker.mjs');
+  (globalThis as any).pdfjsWorker = pdfjsWorker;
+
   const doc = await (pdfjs as any).getDocument({
     data,
     useWorkerFetch: false,
