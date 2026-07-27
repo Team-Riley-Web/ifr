@@ -6,6 +6,20 @@ import { getObjectBytes, hasR2Config } from './r2';
 type NotesMap = Record<string, string>; // lessonId -> note text
 const cache = new Map<string, NotesMap>();
 
+export interface CourseNotesDebug {
+  courseId: string;
+  objectKey: string | null;
+  hasR2Config: boolean;
+  fetched: boolean;
+  bytesLength: number;
+  textLength: number;
+  textPreview: string;
+  units: Array<{ title: string; bodyLength: number }>;
+  titleMatches: Array<{ lessonId: string; title: string; matched: boolean; index: number | null }>;
+  notes: NotesMap;
+  error?: string;
+}
+
 async function extractPdfText(data: Uint8Array): Promise<string> {
   // pdfjs-dist is installed as a dependency of pdf-parse
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -126,6 +140,52 @@ function parseByLessonTitles(text: string, lessons: Lesson[]): NotesMap {
   return result;
 }
 
+async function getPdfBytes(courseId: string, objectKey: string): Promise<Uint8Array | null> {
+  if (hasR2Config) {
+    return getObjectBytes(objectKey);
+  }
+
+  const pdfPath = getPdfPath(courseId);
+  if (pdfPath && fs.existsSync(pdfPath)) {
+    return fs.readFileSync(pdfPath);
+  }
+
+  return null;
+}
+
+function parseNotesFromText(courseId: string, text: string): NotesMap {
+  const course = courses.find(c => c.id === courseId);
+  if (!course) {
+    return {};
+  }
+
+  const units = parseUnits(text);
+  const result: NotesMap = {};
+
+  if (units.length > 0) {
+    for (const lesson of course.lessons) {
+      let bestScore = 0;
+      let bestBody = '';
+
+      for (const unit of units) {
+        const score = titleSimilarity(lesson.title, unit.title);
+        if (score > bestScore) {
+          bestScore = score;
+          bestBody = unit.body;
+        }
+      }
+
+      // Only include if we have a decent match
+      if (bestScore >= 0.4 && bestBody.trim().length > 20) {
+        result[lesson.id] = bestBody.trim();
+      }
+    }
+  }
+
+  const titleBasedNotes = parseByLessonTitles(text, course.lessons);
+  return { ...titleBasedNotes, ...result };
+}
+
 export async function getCourseNotes(courseId: string): Promise<NotesMap> {
   if (cache.has(courseId)) return cache.get(courseId)!;
 
@@ -137,14 +197,7 @@ export async function getCourseNotes(courseId: string): Promise<NotesMap> {
 
   let pdfBytes: Uint8Array | null = null;
   try {
-    if (hasR2Config) {
-      pdfBytes = await getObjectBytes(objectKey);
-    } else {
-      const pdfPath = getPdfPath(courseId);
-      if (pdfPath && fs.existsSync(pdfPath)) {
-        pdfBytes = fs.readFileSync(pdfPath);
-      }
-    }
+    pdfBytes = await getPdfBytes(courseId, objectKey);
   } catch (err) {
     console.error(`[pdf-notes] Failed to fetch ${objectKey}:`, err);
   }
@@ -157,37 +210,7 @@ export async function getCourseNotes(courseId: string): Promise<NotesMap> {
 
   try {
     const text = await extractPdfText(pdfBytes);
-    const course = courses.find(c => c.id === courseId);
-    if (!course) {
-      cache.set(courseId, {});
-      return {};
-    }
-
-    const units = parseUnits(text);
-    const result: NotesMap = {};
-
-    if (units.length > 0) {
-      for (const lesson of course.lessons) {
-        let bestScore = 0;
-        let bestBody = '';
-
-        for (const unit of units) {
-          const score = titleSimilarity(lesson.title, unit.title);
-          if (score > bestScore) {
-            bestScore = score;
-            bestBody = unit.body;
-          }
-        }
-
-        // Only include if we have a decent match
-        if (bestScore >= 0.4 && bestBody.trim().length > 20) {
-          result[lesson.id] = bestBody.trim();
-        }
-      }
-    }
-
-    const titleBasedNotes = parseByLessonTitles(text, course.lessons);
-    const merged = { ...titleBasedNotes, ...result };
+    const merged = parseNotesFromText(courseId, text);
 
     cache.set(courseId, merged);
     return merged;
@@ -196,5 +219,73 @@ export async function getCourseNotes(courseId: string): Promise<NotesMap> {
     // Don't cache — the fetched bytes may have been a partial/corrupted
     // transfer, so let the next request retry instead of staying empty.
     return {};
+  }
+}
+
+export async function getCourseNotesDebug(courseId: string): Promise<CourseNotesDebug> {
+  const objectKey = getPdfObjectKey(courseId);
+  const emptyDebug: CourseNotesDebug = {
+    courseId,
+    objectKey,
+    hasR2Config,
+    fetched: false,
+    bytesLength: 0,
+    textLength: 0,
+    textPreview: '',
+    units: [],
+    titleMatches: [],
+    notes: {},
+  };
+
+  if (!objectKey) {
+    return { ...emptyDebug, error: 'No PDF object key for course' };
+  }
+
+  let pdfBytes: Uint8Array | null = null;
+  try {
+    pdfBytes = await getPdfBytes(courseId, objectKey);
+  } catch (err) {
+    return { ...emptyDebug, error: err instanceof Error ? err.message : String(err) };
+  }
+
+  if (!pdfBytes) {
+    return { ...emptyDebug, error: 'PDF bytes not found' };
+  }
+
+  try {
+    const text = await extractPdfText(pdfBytes);
+    const course = courses.find(c => c.id === courseId);
+    const units = parseUnits(text);
+    const notes = parseNotesFromText(courseId, text);
+
+    return {
+      ...emptyDebug,
+      fetched: true,
+      bytesLength: pdfBytes.byteLength,
+      textLength: text.length,
+      textPreview: text.replace(/\s+/g, ' ').trim().slice(0, 1200),
+      units: units.slice(0, 20).map(unit => ({
+        title: unit.title.slice(0, 120),
+        bodyLength: unit.body.length,
+      })),
+      titleMatches: (course?.lessons ?? []).map((lesson) => {
+        const regex = makeTitleRegex(lesson.title);
+        const match = regex?.exec(text);
+        return {
+          lessonId: lesson.id,
+          title: lesson.title,
+          matched: Boolean(match),
+          index: match?.index ?? null,
+        };
+      }),
+      notes,
+    };
+  } catch (err) {
+    return {
+      ...emptyDebug,
+      fetched: true,
+      bytesLength: pdfBytes.byteLength,
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 }

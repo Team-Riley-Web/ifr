@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getCourse, getPdfObjectKey } from '../../../../lib/courses';
-import { getCourseNotes } from '../../../../lib/pdf-notes';
+import { getCourseNotes, getCourseNotesDebug } from '../../../../lib/pdf-notes';
 import { hasR2Config } from '../../../../lib/r2';
 
 export const GET: APIRoute = async ({ locals, params, url }) => {
@@ -23,6 +23,7 @@ export const GET: APIRoute = async ({ locals, params, url }) => {
     });
   }
 
+  const notesDebug = await getCourseNotesDebug(course.id);
   const lessonIds = Object.keys(notes);
   return new Response(JSON.stringify({
     courseId: course.id,
@@ -31,6 +32,10 @@ export const GET: APIRoute = async ({ locals, params, url }) => {
     lessonCount: course.lessons.length,
     notesCount: lessonIds.length,
     noteLessonIds: lessonIds,
+    debug: {
+      ...notesDebug,
+      notes: undefined,
+    },
   }), {
     headers: { 'Content-Type': 'application/json' },
   });
