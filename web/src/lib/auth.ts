@@ -9,7 +9,7 @@ import {
   hasUsers as usersExist,
 } from './data';
 
-const SESSION_DAYS = 7;
+const SESSION_DAYS = 30;
 
 export function hashPassword(password: string): string {
   return bcrypt.hashSync(password, 12);

@@ -16,4 +16,6 @@ unchecked task unless you are starting it.
   `Blocked YYYY-MM-DD:` note explaining what is needed to unblock it.
 
 ## Queue
-- [ ] 
+- [x] Keep users signed in for 30 days instead of getting logged out (extend session lifetime from 7 to 30 days).
+  - Done 2026-09-19: Bumped `SESSION_DAYS` in `web/src/lib/auth.ts` from 7 to 30. Both the session-store expiry and the `ifr_session` cookie `maxAge` derive from this single constant, so both now last 30 days. Verified with `npm run build`.
+- [ ] Remember video playback position per lesson so resuming a video continues where the user left off instead of restarting from 0:00.
