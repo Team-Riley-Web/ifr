@@ -66,5 +66,10 @@ export function getDb(): DatabaseSync {
   );
 `);
 
+  const userActivityColumns = db.prepare('PRAGMA table_info(user_activity)').all() as { name: string }[];
+  if (!userActivityColumns.some(column => column.name === 'tab_id')) {
+    db.exec('ALTER TABLE user_activity ADD COLUMN tab_id TEXT');
+  }
+
   return db;
 }

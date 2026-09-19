@@ -18,6 +18,9 @@ const lastLesson = lastActivity?.courseId === course.id
   ? course.lessons.find(lesson => lesson.id === lastActivity.lessonId)
   : undefined;
 const initialLesson = lastLesson ?? course.lessons.find(l => !progressMap[l.id]) ?? course.lessons[0]!;
+const initialTabId = lastActivity?.courseId === course.id && initialLesson.tabs.some(t => t.id === lastActivity.tabId)
+  ? lastActivity.tabId
+  : null;
 const courseNotes = await getCourseNotes(course.id);
 await setLastActivity(user.id, course.id, initialLesson.id);
 
@@ -264,11 +267,12 @@ const courseData = {
   </div>
 </Layout>
 
-<script define:vars={{ courseData, initialLessonId: initialLesson.id, serverProgress: progressMap, serverPositions: positionMap, courseId: course.id, courseNotes }}>
+<script define:vars={{ courseData, initialLessonId: initialLesson.id, initialTabId, serverProgress: progressMap, serverPositions: positionMap, courseId: course.id, courseNotes }}>
   // All lesson/tab state lives here
   const lessons = courseData.lessons;
   let currentLessonId = initialLessonId;
   let currentTabId = null;
+  let lastTabId = initialTabId;
   let progress = { ...serverProgress };
   let positions = { ...serverPositions };
   let currentMediaKey = null;
@@ -328,6 +332,15 @@ const courseData = {
     });
   }
 
+  function saveLastTab(tabId) {
+    fetch('/api/last-tab', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courseId, lessonId: currentLessonId, tabId }),
+      keepalive: true,
+    });
+  }
+
   function renderTabs(lesson) {
     tabBar.innerHTML = '';
     lesson.tabs.forEach(tab => {
@@ -339,7 +352,11 @@ const courseData = {
       }`;
       btn.textContent = tab.label;
       btn.dataset.tabId = tab.id;
-      btn.addEventListener('click', () => selectTab(lesson, tab.id));
+      btn.addEventListener('click', () => {
+        lastTabId = tab.id;
+        saveLastTab(tab.id);
+        selectTab(lesson, tab.id);
+      });
       tabBar.appendChild(btn);
     });
   }
@@ -436,8 +453,10 @@ const courseData = {
       }`;
     });
 
-    // Default to main tab
-    currentTabId = lesson.tabs[0]?.id ?? null;
+    // Default to whatever tab the user was last on, if this lesson has it
+    currentTabId = (lastTabId && lesson.tabs.some(t => t.id === lastTabId))
+      ? lastTabId
+      : (lesson.tabs[0]?.id ?? null);
     renderTabs(lesson);
     selectTab(lesson, currentTabId);
 

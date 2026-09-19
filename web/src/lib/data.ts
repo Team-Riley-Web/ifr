@@ -24,6 +24,7 @@ type PlaybackPositions = Record<string, Record<string, number>>;
 export interface UserActivity {
   courseId: string;
   lessonId: string | null;
+  tabId: string | null;
   updatedAt: string;
 }
 
@@ -147,16 +148,19 @@ export async function getLastActivity(userId: number): Promise<UserActivity | nu
   }
 
   const row = getDb().prepare(
-    'SELECT course_id, lesson_id, updated_at FROM user_activity WHERE user_id = ?',
-  ).get(userId) as { course_id: string; lesson_id: string | null; updated_at: string } | undefined;
-  return row ? { courseId: row.course_id, lessonId: row.lesson_id, updatedAt: row.updated_at } : null;
+    'SELECT course_id, lesson_id, tab_id, updated_at FROM user_activity WHERE user_id = ?',
+  ).get(userId) as { course_id: string; lesson_id: string | null; tab_id: string | null; updated_at: string } | undefined;
+  return row ? { courseId: row.course_id, lessonId: row.lesson_id, tabId: row.tab_id, updatedAt: row.updated_at } : null;
 }
 
+// Leaves the remembered tab alone - callers that also know the tab (e.g. a
+// tab switch) should use setLastTab instead so that preference isn't wiped.
 export async function setLastActivity(userId: number, courseId: string, lessonId: string | null = null): Promise<void> {
   const updatedAt = new Date().toISOString();
 
   if (isNetlify) {
-    await getStore(DATA_STORE).setJSON(`activity/${userId}`, { courseId, lessonId, updatedAt });
+    const existing = await getLastActivity(userId);
+    await getStore(DATA_STORE).setJSON(`activity/${userId}`, { courseId, lessonId, tabId: existing?.tabId ?? null, updatedAt });
     return;
   }
 
@@ -168,6 +172,25 @@ export async function setLastActivity(userId: number, courseId: string, lessonId
       lesson_id = excluded.lesson_id,
       updated_at = excluded.updated_at
   `).run(userId, courseId, lessonId, updatedAt);
+}
+
+export async function setLastTab(userId: number, courseId: string, lessonId: string, tabId: string): Promise<void> {
+  const updatedAt = new Date().toISOString();
+
+  if (isNetlify) {
+    await getStore(DATA_STORE).setJSON(`activity/${userId}`, { courseId, lessonId, tabId, updatedAt });
+    return;
+  }
+
+  getDb().prepare(`
+    INSERT INTO user_activity (user_id, course_id, lesson_id, tab_id, updated_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(user_id) DO UPDATE SET
+      course_id = excluded.course_id,
+      lesson_id = excluded.lesson_id,
+      tab_id = excluded.tab_id,
+      updated_at = excluded.updated_at
+  `).run(userId, courseId, lessonId, tabId, updatedAt);
 }
 
 export async function getPlaybackPositions(userId: number): Promise<PlaybackPositions> {
