@@ -272,6 +272,15 @@ const courseData = {
   let positions = { ...serverPositions };
   let currentMediaKey = null;
   let lastPositionSaveTime = 0;
+  let mediaSwitchedAt = 0;
+
+  // The load algorithm that runs when player.src changes fires a spurious
+  // timeupdate at currentTime 0 before the real playback position is known -
+  // ignore save-triggering events for a moment after switching sources so
+  // that glitch can't overwrite a just-loaded lesson's saved position.
+  function justSwitchedMedia() {
+    return Date.now() - mediaSwitchedAt < 1000;
+  }
 
   const player = document.getElementById('player');
   const audioPanel = document.getElementById('audio-panel');
@@ -352,10 +361,14 @@ const courseData = {
       audioPanel.classList.remove('flex');
       player.classList.remove('hidden');
       if (tab?.files[0]) {
-        const src = mediaUrl(lesson.id, tabId, 0);
-        currentMediaKey = mediaKey(lesson.id, tabId, 0);
-        if (player.src !== src) {
-          player.src = src;
+        // player.src always reads back as a resolved absolute URL, so it can
+        // never equal the relative string from mediaUrl() - compare against
+        // our own tracked key instead of reloading (and re-seeking) on every click.
+        const newKey = mediaKey(lesson.id, tabId, 0);
+        if (newKey !== currentMediaKey) {
+          currentMediaKey = newKey;
+          mediaSwitchedAt = Date.now();
+          player.src = mediaUrl(lesson.id, tabId, 0);
           player.load();
           const resumeAt = positions[currentMediaKey];
           if (resumeAt && resumeAt > 5) {
@@ -515,7 +528,7 @@ const courseData = {
 
   // Remember playback position so returning to a lesson resumes where the user left off
   player.addEventListener('timeupdate', () => {
-    if (!currentMediaKey) return;
+    if (!currentMediaKey || justSwitchedMedia()) return;
     const now = Date.now();
     if (now - lastPositionSaveTime > 5000) {
       lastPositionSaveTime = now;
@@ -523,7 +536,7 @@ const courseData = {
     }
   });
   player.addEventListener('pause', () => {
-    if (currentMediaKey) savePosition(currentMediaKey, player.currentTime);
+    if (currentMediaKey && !justSwitchedMedia()) savePosition(currentMediaKey, player.currentTime);
   });
   player.addEventListener('ended', () => {
     if (currentMediaKey) savePosition(currentMediaKey, 0);
