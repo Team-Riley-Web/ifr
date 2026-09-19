@@ -54,6 +54,16 @@ export function getDb(): DatabaseSync {
     updated_at DATETIME NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS playback_position (
+    user_id INTEGER NOT NULL,
+    course_id TEXT NOT NULL,
+    media_key TEXT NOT NULL,
+    position REAL NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (user_id, course_id, media_key),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
 
   return db;

@@ -2,7 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import { getCourse } from '../../lib/courses';
 import { getCourseNotes } from '../../lib/pdf-notes';
-import { getLastActivity, getProgress, setLastActivity } from '../../lib/data';
+import { getLastActivity, getPlaybackPositions, getProgress, setLastActivity } from '../../lib/data';
 
 const { courseId } = Astro.params;
 const course = getCourse(courseId ?? '');
@@ -11,6 +11,7 @@ if (!course) return Astro.redirect('/dashboard');
 const user = Astro.locals.user!;
 
 const progressMap = (await getProgress(user.id))[course.id] ?? {};
+const positionMap = (await getPlaybackPositions(user.id))[course.id] ?? {};
 const lastActivity = await getLastActivity(user.id);
 
 const lastLesson = lastActivity?.courseId === course.id
@@ -262,12 +263,15 @@ const courseData = {
   </div>
 </Layout>
 
-<script define:vars={{ courseData, initialLessonId: initialLesson.id, serverProgress: progressMap, courseId: course.id, courseNotes }}>
+<script define:vars={{ courseData, initialLessonId: initialLesson.id, serverProgress: progressMap, serverPositions: positionMap, courseId: course.id, courseNotes }}>
   // All lesson/tab state lives here
   const lessons = courseData.lessons;
   let currentLessonId = initialLessonId;
   let currentTabId = null;
   let progress = { ...serverProgress };
+  let positions = { ...serverPositions };
+  let currentMediaKey = null;
+  let lastPositionSaveTime = 0;
 
   const player = document.getElementById('player');
   const audioPanel = document.getElementById('audio-panel');
@@ -299,6 +303,21 @@ const courseData = {
     return `/api/media/${courseId}/${lessonId}/${tabId}/${fileIndex}`;
   }
 
+  function mediaKey(lessonId, tabId, fileIndex) {
+    return `${lessonId}/${tabId}/${fileIndex}`;
+  }
+
+  function savePosition(key, time) {
+    if (!key) return;
+    positions[key] = time;
+    fetch('/api/playback-position', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courseId, mediaKey: key, position: time }),
+      keepalive: true,
+    });
+  }
+
   function renderTabs(lesson) {
     tabBar.innerHTML = '';
     lesson.tabs.forEach(tab => {
@@ -323,6 +342,7 @@ const courseData = {
     const isAudio = tab?.files.every(f => f.type === 'audio');
 
     if (isAudio) {
+      currentMediaKey = null;
       player.classList.add('hidden');
       audioPanel.classList.remove('hidden');
       audioPanel.classList.add('flex');
@@ -333,9 +353,19 @@ const courseData = {
       player.classList.remove('hidden');
       if (tab?.files[0]) {
         const src = mediaUrl(lesson.id, tabId, 0);
+        currentMediaKey = mediaKey(lesson.id, tabId, 0);
         if (player.src !== src) {
           player.src = src;
           player.load();
+          const resumeAt = positions[currentMediaKey];
+          if (resumeAt && resumeAt > 5) {
+            const keyAtLoad = currentMediaKey;
+            player.addEventListener('loadedmetadata', () => {
+              if (currentMediaKey === keyAtLoad && player.duration && resumeAt < player.duration - 3) {
+                player.currentTime = resumeAt;
+              }
+            }, { once: true });
+          }
         }
       }
     }
@@ -482,6 +512,32 @@ const courseData = {
   });
 
   player.addEventListener('loadstart', () => { autoCompleted = false; });
+
+  // Remember playback position so returning to a lesson resumes where the user left off
+  player.addEventListener('timeupdate', () => {
+    if (!currentMediaKey) return;
+    const now = Date.now();
+    if (now - lastPositionSaveTime > 5000) {
+      lastPositionSaveTime = now;
+      savePosition(currentMediaKey, player.currentTime);
+    }
+  });
+  player.addEventListener('pause', () => {
+    if (currentMediaKey) savePosition(currentMediaKey, player.currentTime);
+  });
+  player.addEventListener('ended', () => {
+    if (currentMediaKey) savePosition(currentMediaKey, 0);
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && currentMediaKey && !player.paused) {
+      savePosition(currentMediaKey, player.currentTime);
+    }
+  });
+  window.addEventListener('pagehide', () => {
+    if (currentMediaKey && !player.paused) {
+      savePosition(currentMediaKey, player.currentTime);
+    }
+  });
 
   // Manual toggle
   completeBtn.addEventListener('click', () => {

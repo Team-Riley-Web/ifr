@@ -20,6 +20,7 @@ interface SessionUser {
 }
 
 type Progress = Record<string, Record<string, boolean>>;
+type PlaybackPositions = Record<string, Record<string, number>>;
 export interface UserActivity {
   courseId: string;
   lessonId: string | null;
@@ -167,6 +168,40 @@ export async function setLastActivity(userId: number, courseId: string, lessonId
       lesson_id = excluded.lesson_id,
       updated_at = excluded.updated_at
   `).run(userId, courseId, lessonId, updatedAt);
+}
+
+export async function getPlaybackPositions(userId: number): Promise<PlaybackPositions> {
+  if (isNetlify) {
+    return (await getStore(DATA_STORE).get(`playback/${userId}`, { type: 'json', consistency: 'strong' }) as PlaybackPositions | null) ?? {};
+  }
+
+  const rows = getDb().prepare(
+    'SELECT course_id, media_key, position FROM playback_position WHERE user_id = ?',
+  ).all(userId) as { course_id: string; media_key: string; position: number }[];
+  const positions: PlaybackPositions = {};
+  for (const row of rows) {
+    positions[row.course_id] ??= {};
+    positions[row.course_id]![row.media_key] = row.position;
+  }
+  return positions;
+}
+
+export async function setPlaybackPosition(userId: number, courseId: string, mediaKey: string, position: number): Promise<void> {
+  if (isNetlify) {
+    const positions = await getPlaybackPositions(userId);
+    positions[courseId] ??= {};
+    positions[courseId]![mediaKey] = position;
+    await getStore(DATA_STORE).setJSON(`playback/${userId}`, positions);
+    return;
+  }
+
+  getDb().prepare(`
+    INSERT INTO playback_position (user_id, course_id, media_key, position, updated_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(user_id, course_id, media_key) DO UPDATE SET
+      position = excluded.position,
+      updated_at = excluded.updated_at
+  `).run(userId, courseId, mediaKey, position, new Date().toISOString());
 }
 
 export async function setLessonProgress(userId: number, courseId: string, lessonId: string, completed: boolean): Promise<void> {
