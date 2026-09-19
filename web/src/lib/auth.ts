@@ -50,7 +50,7 @@ export async function findUserByUsername(username: string) {
 export const COOKIE_NAME = 'ifr_session';
 export const COOKIE_OPTIONS = {
   httpOnly: true,
-  sameSite: 'strict' as const,
+  sameSite: 'lax' as const,
   path: '/',
   maxAge: SESSION_DAYS * 24 * 60 * 60,
 };
