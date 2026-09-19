@@ -27,6 +27,7 @@ export interface Course {
   title: string;
   folder: string; // relative to CONTENT_BASE
   lessons: Lesson[];
+  autoAdvance?: boolean; // auto-play the next lesson's track when the current one ends
 }
 
 function video(file: string, label = 'Video'): MediaFile {
@@ -422,6 +423,20 @@ export const courses: Course[] = [
       { id: 'soloing-over-loops',       title: 'Soloing Over Your Loops',  tabs: [{ id: 'main', label: 'Main', files: [video('13. Soloing Over Your Loops.mp4')] }] },
       { id: 'breaking-the-mold',        title: 'Breaking the Mold',        tabs: [{ id: 'main', label: 'Main', files: [video('14. Breaking the Mold.mp4')] }] },
       { id: 'performing-your-music',    title: 'Performing Your Music',    tabs: [{ id: 'main', label: 'Main', files: [video('15. Performing Your Music.mp4')] }] },
+    ],
+  },
+  {
+    id: 'sing-the-numbers',
+    title: 'Sing the Numbers',
+    folder: '02. Seven Worlds',
+    autoAdvance: true,
+    lessons: [
+      { id: '1-chord',   title: '1 Chord',    tabs: [{ id: 'main', label: 'Sing the Numbers', files: [audio('02. The 1 chord/03. STN 1 chord 1357.mp3', 'Sing the Numbers')] }] },
+      { id: '2-chord',   title: '2- Chord',   tabs: [{ id: 'main', label: 'Sing the Numbers', files: [audio('04. The 2- chord/03. The notes of the 2- chord 2 4 6 1 ifr_sing_the_numbers_3_track_05.mp3', 'Sing the Numbers')] }] },
+      { id: '4-chord',   title: '4 Chord',    tabs: [{ id: 'main', label: 'Sing the Numbers', files: [audio('08. The 4 chord/03. 4 chord 4 6 1 3 ifr_sing_the_numbers_3_track_11.mp3', 'Sing the Numbers')] }] },
+      { id: '5d-chord',  title: '5D Chord',   tabs: [{ id: 'main', label: 'Sing the Numbers', files: [audio('10. The 5D chord/03. 5D chord 5 7 2 4 ifr_sing_the_numbers_3_track_14.mp3', 'Sing the Numbers')] }] },
+      { id: '6-chord',   title: '6- Chord',   tabs: [{ id: 'main', label: 'Sing the Numbers', files: [audio('12. The 6- chord/03. 6- chord 6 1 3 5 ifr_sing_the_numbers_3_track_17.mp3', 'Sing the Numbers')] }] },
+      { id: '7b5-chord', title: '7-b5 Chord', tabs: [{ id: 'main', label: 'Sing the Numbers', files: [audio('14. The 7-b5 chord/03. 7-b5 chord ifr_sing_the_numbers_3_track_20.mp3', 'Sing the Numbers')] }] },
     ],
   },
 ];

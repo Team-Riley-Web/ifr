@@ -24,6 +24,7 @@ await setLastActivity(user.id, course.id, initialLesson.id);
 // Serializable course data for client script
 const courseData = {
   id: course.id,
+  autoAdvance: course.autoAdvance ?? false,
   lessons: course.lessons.map(l => ({
     id: l.id,
     title: l.title,
@@ -386,7 +387,7 @@ const courseData = {
 
   function renderAudioPanel(lessonId, tab) {
     audioPanel.innerHTML = '';
-    tab.files.forEach((file, i) => {
+    const audioEls = tab.files.map((file, i) => {
       const wrapper = document.createElement('div');
       wrapper.className = 'w-full max-w-lg rounded-xl border border-white/10 bg-slate-950/70 p-5 shadow-2xl shadow-black/30';
       wrapper.innerHTML = `
@@ -394,7 +395,24 @@ const courseData = {
         <audio controls src="${mediaUrl(lessonId, tab.id, i)}" class="w-full" preload="metadata"></audio>
       `;
       audioPanel.appendChild(wrapper);
+      return wrapper.querySelector('audio');
     });
+
+    // Run-through modules (e.g. Sing the Numbers) chain straight through every
+    // track and on into the next lesson, so the whole set plays with no taps.
+    if (courseData.autoAdvance && audioEls.length) {
+      audioEls.forEach((audioEl, i) => {
+        audioEl.addEventListener('ended', () => {
+          const next = audioEls[i + 1];
+          if (next) {
+            next.play().catch(() => {});
+          } else {
+            goToNextLesson();
+          }
+        });
+      });
+      audioEls[0].play().catch(() => {});
+    }
   }
 
   function selectLesson(lessonId) {
@@ -566,7 +584,8 @@ const courseData = {
     const idx = lessons.findIndex(l => l.id === currentLessonId);
     if (idx > 0) selectLesson(lessons[idx - 1].id);
   });
-  nextLessonBtn.addEventListener('click', async () => {
+
+  async function goToNextLesson() {
     const idx = lessons.findIndex(l => l.id === currentLessonId);
     if (idx >= 0 && idx < lessons.length - 1) {
       if (!progress[currentLessonId]) {
@@ -574,7 +593,8 @@ const courseData = {
       }
       selectLesson(lessons[idx + 1].id);
     }
-  });
+  }
+  nextLessonBtn.addEventListener('click', goToNextLesson);
 
   mobileMenuBtn.addEventListener('click', openMobileMenu);
   mobileMenuBackdrop.addEventListener('click', closeMobileMenu);
