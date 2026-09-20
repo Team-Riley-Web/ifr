@@ -34,26 +34,45 @@ await setLastActivity(Astro.locals.user!.id, course.id, 'playlist');
       </nav>
     </aside>
     <main class="min-w-0 flex-1 lg:overflow-y-auto">
-      <div class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-white/10 bg-slate-950/90 px-4 py-3 shadow-2xl shadow-black/20 backdrop-blur-xl lg:px-6">
-        <a href="/dashboard" class="flex items-center gap-2 text-sm font-medium text-slate-300 transition hover:text-white lg:hidden">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-          All Courses
-        </a>
-        <div class="hidden min-w-0 flex-1 lg:block">
-          <h1 id="playlist-title" class="text-sm font-semibold leading-snug text-white sm:text-base">{groups[0].label}</h1>
-          <p id="playlist-number" class="text-xs text-slate-400">Playlist 1 of {groups.length}</p>
+      <!-- Nav bar and player stick together as one cluster so they never
+           overlap - two independent `sticky top-0` siblings would both pin
+           to the same spot and the higher z-index one paints over the other. -->
+      <div class="sticky top-0 z-20 bg-slate-950">
+        <div class="flex items-center justify-between gap-3 border-b border-white/10 bg-slate-950/90 px-4 py-3 shadow-2xl shadow-black/20 backdrop-blur-xl lg:px-6">
+          <a href="/dashboard" class="flex items-center gap-2 text-sm font-medium text-slate-300 transition hover:text-white lg:hidden">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            All Courses
+          </a>
+          <div class="hidden min-w-0 flex-1 lg:block">
+            <h1 id="playlist-title" class="text-sm font-semibold leading-snug text-white sm:text-base">{groups[0].label}</h1>
+            <p id="playlist-number" class="text-xs text-slate-400">Playlist 1 of {groups.length}</p>
+          </div>
+          <button
+            id="mobile-menu-btn"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10 lg:hidden"
+            aria-label="Open playlist menu"
+            aria-controls="mobile-playlist-menu"
+            aria-expanded="false"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16"/>
+            </svg>
+          </button>
         </div>
-        <button
-          id="mobile-menu-btn"
-          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10 lg:hidden"
-          aria-label="Open playlist menu"
-          aria-controls="mobile-playlist-menu"
-          aria-expanded="false"
-        >
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16"/>
-          </svg>
-        </button>
+
+        <div class="mx-auto max-w-3xl px-4 sm:px-8">
+          <section aria-label="Master player" class="my-4 rounded-2xl border border-white/10 bg-slate-900/95 p-5 shadow-xl backdrop-blur">
+            <p id="now-group" class="text-xs font-semibold uppercase tracking-widest text-brand-500">{tracks[0].group}</p>
+            <h2 id="now-title" class="mt-1 text-xl font-semibold" aria-live="polite">{tracks[0].label}</h2>
+            <audio id="playlist-player" class="mt-4 w-full" controls preload="metadata" src={tracks[0].url} aria-label="Playlist audio"></audio>
+            <div class="mt-4 flex items-center justify-between gap-3">
+              <button id="previous-track" type="button" class="rounded-lg bg-white/10 px-4 py-2 text-sm hover:bg-white/20 disabled:opacity-30" disabled>Previous</button>
+              <span id="track-count" class="text-xs text-slate-400">1 of {tracks.length}</span>
+              <button id="next-track" type="button" class="rounded-lg bg-white/10 px-4 py-2 text-sm hover:bg-white/20 disabled:opacity-30">Next</button>
+            </div>
+            <p id="playback-status" role="status" class="mt-2 text-sm text-amber-200"></p>
+          </section>
+        </div>
       </div>
 
       <div class="border-b border-white/10 bg-slate-900/80 px-4 py-3 backdrop-blur lg:hidden">
@@ -63,18 +82,6 @@ await setLastActivity(Astro.locals.user!.id, course.id, 'playlist');
 
       <div class="mx-auto max-w-3xl px-4 py-6 sm:px-8">
       <p class="mt-2 text-sm text-slate-400">Choose a track or press play. The next track plays automatically, including across folders.</p>
-
-      <section aria-label="Master player" class="sticky top-0 z-10 my-6 rounded-2xl border border-white/10 bg-slate-900/95 p-5 shadow-xl backdrop-blur">
-        <p id="now-group" class="text-xs font-semibold uppercase tracking-widest text-brand-500">{tracks[0].group}</p>
-        <h2 id="now-title" class="mt-1 text-xl font-semibold" aria-live="polite">{tracks[0].label}</h2>
-        <audio id="playlist-player" class="mt-4 w-full" controls preload="metadata" src={tracks[0].url} aria-label="Playlist audio"></audio>
-        <div class="mt-4 flex items-center justify-between gap-3">
-          <button id="previous-track" type="button" class="rounded-lg bg-white/10 px-4 py-2 text-sm hover:bg-white/20 disabled:opacity-30" disabled>Previous</button>
-          <span id="track-count" class="text-xs text-slate-400">1 of {tracks.length}</span>
-          <button id="next-track" type="button" class="rounded-lg bg-white/10 px-4 py-2 text-sm hover:bg-white/20 disabled:opacity-30">Next</button>
-        </div>
-        <p id="playback-status" role="status" class="mt-2 text-sm text-amber-200"></p>
-      </section>
 
       <nav aria-label="Track playlist" class="space-y-6 pb-8">
         {groups.map(group => (
