@@ -8,6 +8,10 @@ Netlify Function.
 In production, account, session, and progress records use Netlify Blobs. Local
 development continues to use `web/data/ifr.db`.
 
+## Accounts
+
+Riley logs into services (e.g. Apple) with rileyjl@hendrix.edu.
+
 ## Upload course content
 
 Create a private R2 bucket and an R2 API token with object read/write access.
