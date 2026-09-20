@@ -13,6 +13,7 @@ const courseFolders = [
   '04. Chord Melody',
   '05. Chord Melody 2',
   '06. Violin Looping',
+  '07. Sing the Numbers',
 ];
 
 const {
@@ -28,6 +29,7 @@ if (!accountId || !bucket || !accessKeyId || !secretAccessKey) {
 
 const client = new S3Client({
   region: 'auto',
+  forcePathStyle: true,
   endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
   credentials: { accessKeyId, secretAccessKey },
 });
@@ -41,7 +43,11 @@ async function* walk(directory) {
 }
 
 let uploaded = 0;
-for (const folder of courseFolders) {
+const requestedFolders = process.argv.slice(2);
+if (requestedFolders.some(folder => !courseFolders.includes(folder))) {
+  throw new Error('Unknown course folder requested');
+}
+for (const folder of requestedFolders.length ? requestedFolders : courseFolders) {
   for await (const filePath of walk(path.join(contentRoot, folder))) {
     const fileStat = await stat(filePath);
     const key = path.relative(contentRoot, filePath).split(path.sep).join('/');

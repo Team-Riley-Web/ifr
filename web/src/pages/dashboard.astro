@@ -21,6 +21,7 @@ const courseIcons: Record<string, string> = {
   'chord-melody': '<path d="m11.9 12.1 4.3 4.3"/><path d="M20.1 4.2a2.1 2.1 0 0 0-3 0L4.2 17.1a2.1 2.1 0 0 0 3 3L20.1 7.2a2.1 2.1 0 0 0 0-3Z"/><path d="m6 18 4-4"/><path d="m14 6 4 4"/>',
   'chord-melody-2': '<path d="m11.9 12.1 4.3 4.3"/><path d="M20.1 4.2a2.1 2.1 0 0 0-3 0L4.2 17.1a2.1 2.1 0 0 0 3 3L20.1 7.2a2.1 2.1 0 0 0 0-3Z"/><path d="m6 18 4-4"/><path d="m14 6 4 4"/>',
   'violin-looping': '<path d="M17.5 6.5a4.95 4.95 0 0 0-7 0L6 11l7 7 4.5-4.5a4.95 4.95 0 0 0 0-7Z"/><path d="M3 21 9 15"/><path d="m14 7 3 3"/><path d="M20 3v5h-5"/>',
+  'sing-the-numbers': '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/><path d="M8 22h8"/>',
 };
 const defaultCourseIcon = '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/>';
 const playIcon = '<polygon points="6 3 20 12 6 21 6 3"/>';
@@ -105,7 +106,7 @@ const lastLesson = lastCourse?.lessons.find(lesson => lesson.id === lastActivity
                   started  ? 'bg-brand-500/15 text-brand-100 ring-1 ring-brand-500/20' :
                              'bg-white/10 text-slate-300 ring-1 ring-white/10'
                 }`}>
-                  {finished ? 'Complete' : started ? 'In Progress' : 'Not Started'}
+                  {course.playlist ? 'Playlist' : finished ? 'Complete' : started ? 'In Progress' : 'Not Started'}
                 </span>
               </div>
 
@@ -114,10 +115,10 @@ const lastLesson = lastCourse?.lessons.find(lesson => lesson.id === lastActivity
                 <h3 class="text-lg font-semibold text-white group-hover:text-brand-100 transition-colors leading-snug">
                   {course.title}
                 </h3>
-                <p class="text-sm text-slate-400 mt-1">{total} lesson{total !== 1 ? 's' : ''}</p>
+                <p class="text-sm text-slate-400 mt-1">{course.playlist ? `${course.lessons.flatMap(l => l.tabs.flatMap(t => t.files)).length} tracks · 4 folders` : `${total} lesson${total !== 1 ? 's' : ''}`} </p>
               </div>
 
-              <div class="mt-5">
+              <div class="mt-5" hidden={course.playlist}>
                 <div class="flex justify-between text-xs text-slate-400 mb-1.5">
                   <span>{done} of {total} complete</span>
                   <span>{pct}%</span>

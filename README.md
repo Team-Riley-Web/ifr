@@ -18,6 +18,15 @@ cd web
 npm run upload:content
 ```
 
+The Sing the Numbers playlist uses the audio in `07. Sing the Numbers/`, with
+subfolders `Feel the Numbers` and `Sing the Numbers 1`, `2`, and `3`. Copy the
+source MP3s into those folders before uploading. To upload only this playlist
+using credentials from `web/.env`, run from `web`:
+
+```sh
+node --env-file=.env scripts/upload-content-to-r2.mjs '07. Sing the Numbers'
+```
+
 The upload is repeatable. Object names match the existing course directory
 structure.
 

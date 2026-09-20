@@ -11,7 +11,8 @@ try {
 
 export default defineConfig({
   output: 'server',
-  adapter: netlify(),
+  // Local development uses SQLite and local media without Netlify emulation.
+  adapter: process.argv.includes('dev') ? undefined : netlify(),
   vite: {
     plugins: [tailwindcss()],
   },
