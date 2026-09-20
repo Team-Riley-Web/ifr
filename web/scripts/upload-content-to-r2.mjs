@@ -13,7 +13,10 @@ const courseFolders = [
   '04. Chord Melody',
   '05. Chord Melody 2',
   '06. Violin Looping',
-  '07. Sing the Numbers',
+  'Feel the Numbers',
+  'Sing the Numbers 1',
+  'Sing the Numbers 2',
+  'Sing the Numbers 3',
 ];
 
 const {

@@ -429,7 +429,8 @@ export const courses: Course[] = [
   {
     id: 'sing-the-numbers',
     title: 'Sing the Numbers',
-    folder: '07. Sing the Numbers',
+    // The playlist folders sit at the bucket root, so there is no course-level prefix.
+    folder: '',
     playlist: true,
     lessons: [{ id: 'playlist', title: 'All Tracks', tabs: [
         { id: 'sing-the-numbers-1', label: 'Sing the Numbers 1', files: [
