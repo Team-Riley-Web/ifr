@@ -15,7 +15,7 @@ await setLastActivity(Astro.locals.user!.id, course.id, 'playlist');
 ---
 <Layout title={course.title}>
   <div class="flex min-h-screen flex-col bg-[radial-gradient(circle_at_top_left,rgba(214,168,79,0.14),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(79,70,229,0.12),transparent_30%),linear-gradient(135deg,#050816_0%,#0b1220_45%,#111827_100%)] text-white lg:h-screen lg:flex-row lg:overflow-hidden">
-    <aside class="flex shrink-0 flex-col border-b border-white/10 bg-slate-950/80 shadow-2xl shadow-black/30 backdrop-blur-xl lg:w-72 lg:border-r lg:border-b-0">
+    <aside class="hidden shrink-0 flex-col border-r border-white/10 bg-slate-950/80 shadow-2xl shadow-black/30 backdrop-blur-xl lg:flex lg:w-72">
       <div class="border-b border-white/10 px-5 py-5">
         <a href="/dashboard" class="mb-4 flex items-center gap-2 text-sm text-slate-400 transition hover:text-white">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
@@ -24,7 +24,7 @@ await setLastActivity(Astro.locals.user!.id, course.id, 'playlist');
         <h2 class="text-base font-bold leading-snug">{course.title}</h2>
         <p class="mt-1 text-xs font-semibold text-brand-500">4 playlists · {tracks.length} tracks</p>
       </div>
-      <nav aria-label="Playlists" class="grid grid-cols-2 gap-1 px-2 py-3 lg:flex lg:flex-col lg:overflow-y-auto">
+      <nav aria-label="Playlists" class="flex flex-col px-2 py-3 lg:overflow-y-auto">
         {groups.map((group, index) => (
           <button type="button" data-playlist={group.id} aria-current={index === 0 ? 'true' : undefined} class="playlist-btn group mb-0.5 flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-slate-400 transition-all hover:bg-white/5 hover:text-white">
             <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-500 text-xs group-hover:border-brand-500/60">{index + 1}</span>
@@ -34,10 +34,33 @@ await setLastActivity(Astro.locals.user!.id, course.id, 'playlist');
       </nav>
     </aside>
     <main class="min-w-0 flex-1 lg:overflow-y-auto">
-      <header class="border-b border-white/10 bg-slate-950/75 px-4 py-3 shadow-2xl shadow-black/20 backdrop-blur-xl lg:px-6">
-        <h1 id="playlist-title" class="text-base font-semibold">{groups[0].label}</h1>
-        <p id="playlist-number" class="text-xs text-slate-400">Playlist 1 of {groups.length}</p>
-      </header>
+      <div class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-white/10 bg-slate-950/90 px-4 py-3 shadow-2xl shadow-black/20 backdrop-blur-xl lg:px-6">
+        <a href="/dashboard" class="flex items-center gap-2 text-sm font-medium text-slate-300 transition hover:text-white lg:hidden">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          All Courses
+        </a>
+        <div class="hidden min-w-0 flex-1 lg:block">
+          <h1 id="playlist-title" class="text-sm font-semibold leading-snug text-white sm:text-base">{groups[0].label}</h1>
+          <p id="playlist-number" class="text-xs text-slate-400">Playlist 1 of {groups.length}</p>
+        </div>
+        <button
+          id="mobile-menu-btn"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] text-slate-200 transition hover:bg-white/10 lg:hidden"
+          aria-label="Open playlist menu"
+          aria-controls="mobile-playlist-menu"
+          aria-expanded="false"
+        >
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="border-b border-white/10 bg-slate-900/80 px-4 py-3 backdrop-blur lg:hidden">
+        <h1 id="mobile-playlist-title" class="text-base font-semibold leading-snug text-white">{groups[0].label}</h1>
+        <p id="mobile-playlist-number" class="mt-1 text-xs text-brand-500">Playlist 1 of {groups.length}</p>
+      </div>
+
       <div class="mx-auto max-w-3xl px-4 py-6 sm:px-8">
       <p class="mt-2 text-sm text-slate-400">Choose a track or press play. The next track plays automatically, including across folders.</p>
 
@@ -74,6 +97,32 @@ await setLastActivity(Astro.locals.user!.id, course.id, 'playlist');
     </div>
     </main>
   </div>
+
+  <!-- Mobile playlist menu -->
+  <div id="mobile-playlist-menu" class="fixed inset-0 z-50 hidden lg:hidden" role="dialog" aria-modal="true">
+    <button id="mobile-menu-backdrop" class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" aria-label="Close playlist menu"></button>
+    <aside class="absolute inset-y-0 right-0 flex w-[86vw] max-w-sm flex-col overflow-hidden border-l border-white/10 bg-slate-950 shadow-2xl shadow-black/50">
+      <div class="border-b border-white/10 px-4 py-4">
+        <div class="mb-3 flex items-center justify-end">
+          <button id="mobile-menu-close" class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white" aria-label="Close playlist menu">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <h2 class="text-base font-bold leading-snug text-white">{course.title}</h2>
+        <p class="mt-1 text-xs font-semibold text-brand-500">4 playlists · {tracks.length} tracks</p>
+      </div>
+      <nav aria-label="Playlists" class="flex-1 overflow-y-auto px-2 py-3">
+        {groups.map((group, index) => (
+          <button type="button" data-playlist={group.id} aria-current={index === 0 ? 'true' : undefined} class="playlist-btn group mb-0.5 flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-slate-400 transition-all hover:bg-white/5 hover:text-white">
+            <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-500 text-xs group-hover:border-brand-500/60">{index + 1}</span>
+            <span class="text-sm leading-snug">{group.label}<span class="mt-1 block text-xs text-slate-400">{group.files.length} tracks</span></span>
+          </button>
+        ))}
+      </nav>
+    </aside>
+  </div>
 </Layout>
 <style>
   .playlist-btn[aria-current="true"] { background: linear-gradient(to right, rgb(214 168 79 / 0.2), rgb(99 102 241 / 0.1)); color: white; box-shadow: 0 0 0 1px rgb(214 168 79 / 0.25); }
@@ -85,10 +134,33 @@ await setLastActivity(Astro.locals.user!.id, course.id, 'playlist');
   const next = document.getElementById('next-track');
   const status = document.getElementById('playback-status');
   const rows = [...document.querySelectorAll('[data-track-index]')];
+  // Playlist buttons exist twice (desktop sidebar + mobile menu), so the
+  // group's position must come from the track/group order, not from the
+  // index of whichever button happened to match in this list.
   const playlistButtons = [...document.querySelectorAll('[data-playlist]')];
+  const groupOrder = [...new Set(tracks.map(track => track.groupId))];
   const sections = [...document.querySelectorAll('[data-playlist-section]')];
+  const mobileMenu = document.getElementById('mobile-playlist-menu');
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const mobileMenuBackdrop = document.getElementById('mobile-menu-backdrop');
+  const mobileMenuClose = document.getElementById('mobile-menu-close');
   let current = 0;
   let selection = 0;
+
+  function openMobileMenu() {
+    mobileMenu.classList.remove('hidden');
+    mobileMenuBtn.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('overflow-hidden');
+  }
+  function closeMobileMenu() {
+    mobileMenu.classList.add('hidden');
+    mobileMenuBtn.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('overflow-hidden');
+  }
+  mobileMenuBtn.addEventListener('click', openMobileMenu);
+  mobileMenuBackdrop.addEventListener('click', closeMobileMenu);
+  mobileMenuClose.addEventListener('click', closeMobileMenu);
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMobileMenu(); });
 
   function selectTrack(index, play = true) {
     if (index < 0 || index >= tracks.length) return;
@@ -96,13 +168,15 @@ await setLastActivity(Astro.locals.user!.id, course.id, 'playlist');
     current = index;
     const track = tracks[index];
     status.textContent = '';
-    playlistButtons.forEach((button, i) => {
-      if (button.dataset.playlist === track.groupId) {
-        button.setAttribute('aria-current', 'true');
-        document.getElementById('playlist-title').textContent = track.group;
-        document.getElementById('playlist-number').textContent = `Playlist ${i + 1} of ${playlistButtons.length}`;
-      } else button.removeAttribute('aria-current');
+    const groupPosition = `Playlist ${groupOrder.indexOf(track.groupId) + 1} of ${groupOrder.length}`;
+    playlistButtons.forEach(button => {
+      if (button.dataset.playlist === track.groupId) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
     });
+    document.getElementById('playlist-title').textContent = track.group;
+    document.getElementById('playlist-number').textContent = groupPosition;
+    document.getElementById('mobile-playlist-title').textContent = track.group;
+    document.getElementById('mobile-playlist-number').textContent = groupPosition;
     sections.forEach(section => { section.hidden = section.dataset.playlistSection !== track.groupId; });
     document.getElementById('now-group').textContent = track.group;
     document.getElementById('now-title').textContent = track.label;
@@ -126,6 +200,7 @@ await setLastActivity(Astro.locals.user!.id, course.id, 'playlist');
 
   playlistButtons.forEach(button => button.addEventListener('click', () => {
     selectTrack(tracks.findIndex(track => track.groupId === button.dataset.playlist));
+    closeMobileMenu();
   }));
   rows.forEach((row, i) => row.addEventListener('click', () => selectTrack(i)));
   previous.addEventListener('click', () => selectTrack(current - 1));
